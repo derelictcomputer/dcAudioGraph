@@ -2,7 +2,9 @@
 #include "../dcAudioGraph/Graph.h"
 #include "Test_Common.h"
 
-void makeBasicGraph(dc::Graph& g, size_t numIo)
+using namespace dc;
+
+void makeBasicGraph(Graph& g, size_t numIo)
 {
 	g.setNumAudioInputs(numIo);
 	EXPECT_EQ(g.getNumAudioInputs(), numIo);
@@ -38,13 +40,13 @@ TEST(Graph, GraphIOBasic)
 	const size_t numIo = 1;
 	const float testValue = 1.0f;
 
-	dc::AudioBuffer inBuffer;
+	AudioBuffer inBuffer;
 	makeTestBuffer(inBuffer, numSamples, numIo, testValue);
-	dc::AudioBuffer outBuffer;
+	AudioBuffer outBuffer;
 	makeTestBuffer(outBuffer, numSamples, numIo, 0.0f);
 
-	dc::Graph g;
-	makeBasicGraph(g, 1);
+	Graph g;
+	makeBasicGraph(g, numIo);
 	g.init(numSamples);
 	g.process(inBuffer, outBuffer);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
@@ -56,13 +58,13 @@ TEST(Graph, GraphIOBasic_Loop)
 	const size_t numIo = 1;
 	const float testValue = 1.0f;
 
-	dc::AudioBuffer inBuffer;
+	AudioBuffer inBuffer;
 	makeTestBuffer(inBuffer, numSamples, numIo, testValue);
-	dc::AudioBuffer outBuffer;
+	AudioBuffer outBuffer;
 	makeTestBuffer(outBuffer, numSamples, numIo, 0.0f);
 
-	dc::Graph g;
-	makeBasicGraph(g, 1);
+	Graph g;
+	makeBasicGraph(g, numIo);
 	g.init(numSamples);
 
 	for (int i = 0; i < 1000; ++i)

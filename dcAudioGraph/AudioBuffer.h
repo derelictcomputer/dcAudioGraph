@@ -30,6 +30,7 @@ public:
 	void copyFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel);
 
 	void fromInterleaved(const float* buffer, size_t numSamples, size_t numChannels, bool allowResize);
+	void toInterleaved(float* buffer, size_t numSamples, size_t numChannels);
 
 	float* getChannelPointer(size_t channel);
 

@@ -37,6 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\test\Test_Buffer.cpp" />
+    <ClCompile Include="..\..\..\..\test\Test_Common.cpp" />
     <ClCompile Include="..\..\..\..\test\Test_Graph.cpp" />
   </ItemGroup>
   <ItemGroup>

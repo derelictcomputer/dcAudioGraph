@@ -96,3 +96,21 @@ void dc::AudioBuffer::fromInterleaved(const float *buffer, size_t numSamples, si
         }
     }
 }
+
+void dc::AudioBuffer::toInterleaved(float* buffer, size_t numSamples, size_t numChannels)
+{
+	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
+	{
+		for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
+		{
+			if (cIdx >= _numChannels || sIdx >= _numSamples)
+			{
+				buffer[cIdx + sIdx * numChannels] = 0;
+			}
+			else
+			{
+				buffer[cIdx + sIdx * numChannels] = _data[sIdx + cIdx * _numSamples];
+			}
+		}
+	}
+}
