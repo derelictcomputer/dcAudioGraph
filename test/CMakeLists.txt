@@ -1,2 +1,0 @@
-add_executable(dcAudioGraph_test test_Graph.cpp tests.cpp)
-target_link_libraries(dcAudioGraph_test LINK_PUBLIC dcAudioGraph)

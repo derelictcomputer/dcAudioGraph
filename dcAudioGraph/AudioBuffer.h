@@ -3,7 +3,7 @@
 
     AudioBuffer.h
     Created: 27 Dec 2018 3:19:06pm
-    Author:  charl
+    Author:  Charlie Huguenard
 
   ==============================================================================
 */
@@ -28,6 +28,8 @@ public:
 	void zero(size_t channel);
 	void addFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel);
 	void copyFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel);
+
+	void fromInterleaved(const float* buffer, size_t numSamples, size_t numChannels, bool allowResize);
 
 	float* getChannelPointer(size_t channel);
 

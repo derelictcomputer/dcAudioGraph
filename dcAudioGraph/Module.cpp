@@ -3,7 +3,7 @@
 
     ModuleBase.cpp
     Created: 25 Dec 2018 12:25:16pm
-    Author:  charl
+    Author:  Charlie Huguenard
 
   ==============================================================================
 */

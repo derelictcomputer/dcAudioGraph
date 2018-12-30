@@ -3,7 +3,7 @@
 
     Graph.h
     Created: 25 Dec 2018 12:23:17pm
-    Author:  charl
+    Author:  Charlie Huguenard
 
   ==============================================================================
 */

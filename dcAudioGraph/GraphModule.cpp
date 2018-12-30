@@ -3,7 +3,7 @@
 
     GraphModule.cpp
     Created: 27 Dec 2018 7:34:18pm
-    Author:  charl
+    Author:  Charlie Huguenard
 
   ==============================================================================
 */

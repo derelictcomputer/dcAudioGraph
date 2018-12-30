@@ -3,7 +3,7 @@
 
     AudioBuffer.cpp
     Created: 27 Dec 2018 3:19:06pm
-    Author:  charl
+    Author:  Charlie Huguenard
 
   ==============================================================================
 */
@@ -63,9 +63,36 @@ void dc::AudioBuffer::copyFrom(const AudioBuffer& other, size_t fromChannel, siz
 
 float* dc::AudioBuffer::getChannelPointer(size_t channel)
 {
-	if (channel < _numChannels)
+	const size_t idx = channel * _numSamples;
+
+	if (idx < _data.size())
 	{
-		return &_data.data()[channel * _numSamples];
+		return &_data[idx];
 	}
+
 	return nullptr;
+}
+
+void dc::AudioBuffer::fromInterleaved(const float *buffer, size_t numSamples, size_t numChannels, bool allowResize)
+{
+    if (allowResize && numSamples != _numSamples && numChannels != _numChannels)
+    {
+        resize(numSamples, numChannels);
+    }
+    for (size_t sIdx = 0; sIdx < _numSamples; ++sIdx)
+    {
+        if (sIdx >= numSamples)
+        {
+            break;
+        }
+
+        for (size_t cIdx = 0; cIdx < _numChannels; ++cIdx)
+        {
+            if (cIdx >= numChannels)
+            {
+                break;
+            }
+            _data[sIdx + cIdx * _numSamples] = buffer[cIdx + sIdx * numChannels];
+        }
+    }
 }
