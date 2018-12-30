@@ -1,15 +1,39 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\..\dcAudioGraph\AudioBuffer.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\GraphModule.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp" />
+    <ClCompile Include="..\..\..\dcAudioGraph\AudioBuffer.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp">
+      <Filter>dcAudioGraph\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\GraphModule.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\Graph.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\Module.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h">
+      <Filter>dcAudioGraph\Modules</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dcAudioGraph">
+      <UniqueIdentifier>{b579affd-f9ee-4116-98db-06632d14f476}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dcAudioGraph\Modules">
+      <UniqueIdentifier>{8d1c106e-51e3-4ba9-8f59-ddf12b85fa4a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

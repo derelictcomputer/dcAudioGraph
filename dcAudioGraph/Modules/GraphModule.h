@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "Graph.h"
+#include "../Graph.h"
 
 namespace dc
 {
