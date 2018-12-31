@@ -17,7 +17,7 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
     inBuf.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), true);
     outBuf.fromInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs(), true);
     graph->process(inBuf, outBuf);
-
+	outBuf.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
 	return paContinue;
 }
 

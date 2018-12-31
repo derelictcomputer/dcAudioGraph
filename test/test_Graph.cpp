@@ -40,10 +40,9 @@ TEST(Graph, GraphIOBasic)
 	const size_t numIo = 1;
 	const float testValue = 1.0f;
 
-	AudioBuffer inBuffer;
-	makeTestBuffer(inBuffer, numSamples, numIo, testValue);
-	AudioBuffer outBuffer;
-	makeTestBuffer(outBuffer, numSamples, numIo, 0.0f);
+	AudioBuffer inBuffer(numSamples, numIo);
+	inBuffer.fill(testValue);
+	AudioBuffer outBuffer(numSamples, numIo);
 
 	Graph g;
 	makeBasicGraph(g, numIo);
@@ -58,10 +57,9 @@ TEST(Graph, GraphIOBasic_Loop)
 	const size_t numIo = 1;
 	const float testValue = 1.0f;
 
-	AudioBuffer inBuffer;
-	makeTestBuffer(inBuffer, numSamples, numIo, testValue);
-	AudioBuffer outBuffer;
-	makeTestBuffer(outBuffer, numSamples, numIo, 0.0f);
+	AudioBuffer inBuffer(numSamples, numIo);
+	inBuffer.fill(testValue);
+	AudioBuffer outBuffer(numSamples, numIo);
 
 	Graph g;
 	makeBasicGraph(g, numIo);

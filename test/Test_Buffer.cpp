@@ -16,18 +16,83 @@ TEST(AudioBuffer, ResizeFunctional)
 	ASSERT_EQ(b1.getNumChannels(), numChannels);
 }
 
+TEST(AudioBuffer, FillFunctional)
+{
+	const size_t numSamples = 512;
+	const size_t numChannels = 3;
+	const float value = 0.5f;
+
+	AudioBuffer b1(numSamples, numChannels);
+	AudioBuffer b2(numSamples, numChannels);
+
+	EXPECT_TRUE(buffersEqual(b1, b2));
+
+	b1.fill(value);
+
+	ASSERT_FALSE(buffersEqual(b1, b2));
+
+	b2.fill(value);
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+
+	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
+	{
+		b1.fill(cIdx, 0.0f);
+		ASSERT_FALSE(buffersEqual(b1, b2));
+		b2.fill(cIdx, 0.0f);
+		ASSERT_TRUE(buffersEqual(b1, b2));
+	}
+}
+
 TEST(AudioBuffer, ZeroFunctional)
 {
 	const size_t numSamples = 512;
-	const size_t numChannels = 4;
-	AudioBuffer b1;
-	makeTestBuffer(b1, numSamples, numChannels, 0.0f);
-	AudioBuffer b2;
-	makeTestBuffer(b2, numSamples, numChannels, 1.0f);
+	const size_t numChannels = 3;
 
-	for (size_t cIdx = 0; cIdx < b2.getNumChannels(); ++cIdx)
+	AudioBuffer b1(numSamples, numChannels);
+	AudioBuffer b2(numSamples, numChannels);
+	b2.fill(0.9f);
+
+	EXPECT_FALSE(buffersEqual(b1, b2));
+
+	b2.zero();
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+
+	b1.fill(0.2);
+	b2.fill(0.2);
+
+	EXPECT_TRUE(buffersEqual(b1, b2));
+
+	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
 	{
+		b1.zero(cIdx);
+		ASSERT_FALSE(buffersEqual(b1, b2));
 		b2.zero(cIdx);
+		ASSERT_TRUE(buffersEqual(b1, b2));
+	}
+}
+
+TEST(AudioBuffer, CopyFunctional)
+{
+	const size_t numSamples = 512;
+	const size_t numChannels = 4;
+
+	AudioBuffer b1;
+	AudioBuffer b2(numSamples, numChannels);
+	b2.fill(1.0f);
+
+	EXPECT_FALSE(buffersEqual(b1, b2));
+
+	b1.copyFrom(b2, true);
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+
+	b1.zero();
+
+	for (size_t cIdx = 0; cIdx < b1.getNumChannels(); ++cIdx)
+	{
+		b1.copyFrom(b2, cIdx, cIdx);
 	}
 
 	ASSERT_TRUE(buffersEqual(b1, b2));
@@ -37,31 +102,22 @@ TEST(AudioBuffer, AddFunctional)
 {
 	const size_t numSamples = 512;
 	const size_t numChannels = 4;
-	AudioBuffer b1;
-	makeTestBuffer(b1, numSamples, numChannels, 0.0f);
-	AudioBuffer b2;
-	makeTestBuffer(b2, numSamples, numChannels, 1.0f);
+
+	AudioBuffer b1(numSamples, numChannels);
+	AudioBuffer b2(numSamples, numChannels);
+	b2.fill(1.0f);
+
+	EXPECT_FALSE(buffersEqual(b1, b2));
+
+	b1.addFrom(b2);
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+
+	b1.zero();
 
 	for (size_t cIdx = 0; cIdx < b1.getNumChannels(); ++cIdx)
 	{
 		b1.addFrom(b2, cIdx, cIdx);
-	}
-
-	ASSERT_TRUE(buffersEqual(b1, b2));
-}
-
-TEST(AudioBuffer, CopyFunctional)
-{
-	const size_t numSamples = 512;
-	const size_t numChannels = 4;
-	AudioBuffer b1;
-	makeTestBuffer(b1, numSamples, numChannels, 0.0f);
-	AudioBuffer b2;
-	makeTestBuffer(b2, numSamples, numChannels, 1.0f);
-
-	for (size_t cIdx = 0; cIdx < b2.getNumChannels(); ++cIdx)
-	{
-		b2.copyFrom(b1, cIdx, cIdx);
 	}
 
 	ASSERT_TRUE(buffersEqual(b1, b2));

@@ -9,38 +9,85 @@
 */
 
 #include "AudioBuffer.h"
+#include <algorithm>
+
+dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
+{
+	resize(numSamples, numChannels);
+}
+
+dc::AudioBuffer::~AudioBuffer()
+{
+	delete[] _data;
+}
 
 void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 {
-	_data.resize(numSamples * numChannels);
+	// filter redundant calls
+	if (numSamples == _numSamples && numChannels == _numChannels)
+	{
+		return;
+	}
+
+	// if we're downsizing or keeping the same total size, just change the counts
+	if (numSamples * numChannels <= _numSamples * _numChannels)
+	{
+		_numSamples = numSamples;
+		_numChannels = numChannels;
+		return;
+	}
+
 	_numSamples = numSamples;
 	_numChannels = numChannels;
+
+	// free the old data
+	delete[] _data;
+
+	// allocate the new data
+	_data = new float[_numSamples * _numChannels];
+
+	// zero the new data
+	// TODO: it might be useful to allow keeping the old data
+	zero();
+}
+
+void dc::AudioBuffer::fill(float value)
+{
+	if (nullptr != _data)
+	{
+		std::fill(_data, _data + sizeof(_data), value);
+	}
+}
+
+void dc::AudioBuffer::fill(size_t channel, float value)
+{
+	if (float* start = getChannelPointer(channel))
+	{
+		std::fill(start, start + _numSamples, value);
+	}
+}
+
+void dc::AudioBuffer::zero()
+{
+	fill(0.0f);
 }
 
 void dc::AudioBuffer::zero(size_t channel)
 {
-	if (channel < _numChannels)
-	{
-		const auto begin = _data.begin() + channel * _numSamples;
-		const auto end = begin + _numSamples;
-		std::fill(begin, end, 0.0f);
-	}
+	fill(channel, 0.0f);
 }
 
-void dc::AudioBuffer::addFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel)
+void dc::AudioBuffer::copyFrom(const AudioBuffer& other, bool allowResize)
 {
-	if (fromChannel < other.getNumChannels() && toChannel < _numChannels)
+	if (allowResize)
 	{
-		for (size_t sIdx = 0; sIdx < other.getNumSamples(); ++sIdx)
-		{
-			if (sIdx == _numSamples)
-			{
-				break;
-			}
-			const size_t myIdx = sIdx + _numSamples * toChannel;
-			const size_t otherIdx = sIdx + other.getNumSamples() * fromChannel;
-			_data[myIdx] += other._data[otherIdx];
-		}
+		resize(other._numSamples, other._numChannels);
+	}
+
+	const size_t numChannelsToCopy = std::min(_numChannels, other._numChannels);
+	for (size_t cIdx = 0; cIdx < numChannelsToCopy; ++cIdx)
+	{
+		copyFrom(other, cIdx, cIdx);
 	}
 }
 
@@ -48,29 +95,35 @@ void dc::AudioBuffer::copyFrom(const AudioBuffer& other, size_t fromChannel, siz
 {
 	if (fromChannel < other.getNumChannels() && toChannel < _numChannels)
 	{
-		for (size_t sIdx = 0; sIdx < other.getNumSamples(); ++sIdx)
-		{
-			if (sIdx == _numSamples)
-			{
-				break;
-			}
-			const size_t myIdx = sIdx + _numSamples * toChannel;
-			const size_t otherIdx = sIdx + other.getNumSamples() * fromChannel;
-			_data[myIdx] = other._data[otherIdx];
-		}
+		const size_t numSamplesToCopy = std::min(_numSamples, other._numSamples);
+		float* fromStart = other._data + fromChannel * other._numSamples;
+		float* fromEnd = fromStart + numSamplesToCopy;
+		float* toStart = _data + toChannel * _numSamples;
+		std::copy(fromStart, fromEnd, toStart);
 	}
 }
 
-float* dc::AudioBuffer::getChannelPointer(size_t channel)
+void dc::AudioBuffer::addFrom(const AudioBuffer& other)
 {
-	const size_t idx = channel * _numSamples;
-
-	if (idx < _data.size())
+	const size_t numChannelsToAdd = std::min(_numChannels, other._numChannels);
+	for (size_t cIdx = 0; cIdx < numChannelsToAdd; ++cIdx)
 	{
-		return &_data[idx];
+		addFrom(other, cIdx, cIdx);
 	}
+}
 
-	return nullptr;
+void dc::AudioBuffer::addFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel)
+{
+	if (fromChannel < other.getNumChannels() && toChannel < _numChannels)
+	{
+		const size_t numSamplesToAdd = std::min(_numSamples, other._numSamples);
+		float* fromPtr = other._data + fromChannel * other._numSamples;
+		float* toPtr = _data + toChannel * _numSamples;
+		for (size_t sIdx = 0; sIdx < numSamplesToAdd; ++sIdx)
+		{
+			toPtr[sIdx] = fromPtr[sIdx];
+		}
+	}
 }
 
 void dc::AudioBuffer::fromInterleaved(const float *buffer, size_t numSamples, size_t numChannels, bool allowResize)
@@ -113,4 +166,14 @@ void dc::AudioBuffer::toInterleaved(float* buffer, size_t numSamples, size_t num
 			}
 		}
 	}
+}
+
+float* dc::AudioBuffer::getChannelPointer(size_t channel)
+{
+	if (channel < _numChannels)
+	{
+		return _data + channel * _numSamples;
+	}
+
+	return nullptr;
 }

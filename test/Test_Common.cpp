@@ -1,9 +1,10 @@
 #include "Test_Common.h"
 #include "../dcAudioGraph/AudioBuffer.h"
+#include <cmath>
 
 bool dc::samplesEqual(float s0, float s1)
 {
-	return std::fabs(s0 - s1) < 0.0001f;
+	return std::abs(s0 - s1) < 0.0001f;
 }
 
 bool dc::buffersEqual(AudioBuffer& b0, AudioBuffer& b1)
@@ -22,6 +23,12 @@ bool dc::buffersEqual(AudioBuffer& b0, AudioBuffer& b1)
 	{
 		auto* b0Ptr = b0.getChannelPointer(cIdx);
 		auto* b1Ptr = b1.getChannelPointer(cIdx);
+
+		if (nullptr == b0Ptr && nullptr == b1Ptr)
+		{
+			return true;
+		}
+
 		for (size_t sIdx = 0; sIdx < b0.getNumSamples(); ++sIdx)
 		{
 			if (!samplesEqual(b0Ptr[sIdx], b1Ptr[sIdx]))
@@ -32,17 +39,4 @@ bool dc::buffersEqual(AudioBuffer& b0, AudioBuffer& b1)
 	}
 
 	return true;
-}
-
-void dc::makeTestBuffer(AudioBuffer& b, size_t numSamples, size_t numChannels, float value)
-{
-	b.resize(numSamples, numChannels);
-	for (size_t cIdx = 0; cIdx < b.getNumChannels(); ++cIdx)
-	{
-		auto* cPtr = b.getChannelPointer(cIdx);
-		for (size_t sIdx = 0; sIdx < b.getNumSamples(); ++sIdx)
-		{
-			cPtr[sIdx] = value;
-		}
-	}
 }
