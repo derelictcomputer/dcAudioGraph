@@ -14,8 +14,8 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
     float* outSamples = static_cast<float*>(outputBuffer);
 
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
-    inBuf.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), true);
-    outBuf.fromInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs(), true);
+    inBuf.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), false);
+	outBuf.zero();
     graph->process(inBuf, outBuf);
 	outBuf.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
 	return paContinue;
@@ -60,6 +60,9 @@ int main()
     outputParams.sampleFormat = paFloat32;
     outputParams.suggestedLatency = Pa_GetDeviceInfo(outputParams.device)->defaultLowOutputLatency;
     outputParams.hostApiSpecificStreamInfo = nullptr;
+
+	inBuf.resize(64, 2);
+	outBuf.resize(64, 2);
 
     dc::Graph graph;
     graph.init(64, 48000);
