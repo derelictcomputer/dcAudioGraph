@@ -2,6 +2,11 @@
 // Created by Charlie Huguenard on 12/29/2018.
 //
 
+/*
+ * WARNING!!!! If this is working properly, you'll get feedback on laptops and such.
+ * You have been warned.
+ */
+
 #include "../portaudio/include/portaudio.h"
 #include "../../dcAudioGraph/Graph.h"
 
