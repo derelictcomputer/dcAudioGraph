@@ -46,7 +46,7 @@ TEST(Graph, GraphIOBasic)
 
 	Graph g;
 	makeBasicGraph(g, numIo);
-	g.init(numSamples);
+	g.init(numSamples, 44100);
 	g.process(inBuffer, outBuffer);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 }
@@ -63,7 +63,7 @@ TEST(Graph, GraphIOBasic_Loop)
 
 	Graph g;
 	makeBasicGraph(g, numIo);
-	g.init(numSamples);
+	g.init(numSamples, 44100);
 
 	for (int i = 0; i < 1000; ++i)
 	{

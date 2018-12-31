@@ -21,8 +21,8 @@ public:
 	Module() = default;
 	virtual ~Module() = default;
 
-	void init(size_t bufferSize);
-	void teardown();
+	void setBufferSize(size_t bufferSize);
+	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
 	void process(size_t rev);
 	AudioBuffer& getOutputBuffer();
 
@@ -36,12 +36,11 @@ public:
 	size_t id = 0;
 
 protected:
-	virtual void onInit(size_t /*bufferSize*/) {}
-	virtual void onTeardown() {}
 	virtual void onProcess() {}
-	virtual void onRefreshIo(size_t /*bufferSize*/) {}
+	virtual void onRefreshBuffers() {}
 
-	AudioBuffer _processBuffer;
+	AudioBuffer _buffer;
+	double _sampleRate = 0;
 
 private:
 	struct AudioOutput;
@@ -64,7 +63,7 @@ private:
 		size_t index;
 	};
 
-	void refreshIo(size_t bufferSize);
+	void refreshBuffers(size_t numSamples);
 
 	std::vector<std::shared_ptr<AudioInput>> _audioInputs;
 	std::vector<std::shared_ptr<AudioOutput>> _audioOutputs;

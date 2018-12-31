@@ -84,10 +84,19 @@ void dc::AudioBuffer::copyFrom(const AudioBuffer& other, bool allowResize)
 		resize(other._numSamples, other._numChannels);
 	}
 
-	const size_t numChannelsToCopy = std::min(_numChannels, other._numChannels);
-	for (size_t cIdx = 0; cIdx < numChannelsToCopy; ++cIdx)
+	// if buffers are the same size, shortcut
+	if (_numSamples == other._numSamples && _numChannels == other._numChannels)
 	{
-		copyFrom(other, cIdx, cIdx);
+		std::copy(other._data, other._data + _numSamples * _numChannels, _data);
+	}
+	else
+	{
+		const size_t numChannelsToCopy = std::min(_numChannels, other._numChannels);
+
+		for (size_t cIdx = 0; cIdx < numChannelsToCopy; ++cIdx)
+		{
+			copyFrom(other, cIdx, cIdx);
+		}
 	}
 }
 

@@ -15,6 +15,7 @@
 namespace dc
 {
 // a module for output from a graph
+// Note: this module is really just a passthrough, but it helps for clarity
 class GraphOutputModule : public Module
 {
 };
@@ -27,7 +28,7 @@ public:
 
 protected:
 	void onProcess() final;
-	void onRefreshIo(size_t bufferSize) override;
+	void onRefreshBuffers() override;
 
 private:
 	AudioBuffer _inputBuffer;
@@ -39,8 +40,7 @@ public:
 	Graph();
 	~Graph() = default;
 
-	void init(size_t bufferSize);
-	void teardown();
+	void init(size_t bufferSize, double sampleRate);
 	void process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffer);
 
 	size_t getNumAudioInputs() const { return _inputModule.getNumAudioOutputs(); }
@@ -62,5 +62,6 @@ private:
 	GraphInputModule _inputModule;
 	GraphOutputModule _outputModule;
 	size_t _bufferSize = 0;
+	double _sampleRate = 0;
 };
 }

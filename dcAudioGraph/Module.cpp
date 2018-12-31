@@ -11,15 +11,9 @@
 #include "Module.h"
 #include <algorithm>
 
-void dc::Module::init(size_t bufferSize)
+void dc::Module::setBufferSize(size_t bufferSize)
 {
-	refreshIo(bufferSize);
-	onInit(bufferSize);
-}
-
-void dc::Module::teardown()
-{
-	onTeardown();
+	refreshBuffers(bufferSize);
 }
 
 void dc::Module::process(size_t rev)
@@ -33,16 +27,16 @@ void dc::Module::process(size_t rev)
 
 	// we assume _processBuffer has enough channels for all the inputs,
 	// but let's check anyway
-	if (_processBuffer.getNumChannels() < _audioInputs.size())
+	if (_buffer.getNumChannels() < _audioInputs.size())
 	{
 		return;
 	}
 
 	// pull audio from inputs to process buffer
-	for (size_t cIdx = 0; cIdx < _processBuffer.getNumChannels(); ++cIdx)
+	for (size_t cIdx = 0; cIdx < _buffer.getNumChannels(); ++cIdx)
 	{
 		// clear input buffer
-		_processBuffer.zero(cIdx);
+		_buffer.zero(cIdx);
 
 		// if we have an input for this channel, pull it into the process buffer
 		if (cIdx < _audioInputs.size())
@@ -56,7 +50,7 @@ void dc::Module::process(size_t rev)
 					// process upstream modules
 					aOut->parent.process(rev);
 					// sum the audio from each input's connections
-					_processBuffer.addFrom(aOut->parent.getOutputBuffer(), aOut->index, cIdx);
+					_buffer.addFrom(aOut->parent.getOutputBuffer(), aOut->index, cIdx);
 					++oIdx;
 				}
 				// if output doesn't exist anymore, remove it
@@ -74,7 +68,7 @@ void dc::Module::process(size_t rev)
 
 dc::AudioBuffer& dc::Module::getOutputBuffer()
 {
-	return _processBuffer;
+	return _buffer;
 }
 
 void dc::Module::setNumAudioInputs(size_t numInputs)
@@ -87,7 +81,7 @@ void dc::Module::setNumAudioInputs(size_t numInputs)
 	{
 		_audioInputs.push_back(std::make_unique<AudioInput>(*this));
 	}
-	refreshIo(_processBuffer.getNumSamples());
+	refreshBuffers(_buffer.getNumSamples());
 }
 
 void dc::Module::setNumAudioOutputs(size_t numOutputs)
@@ -100,7 +94,7 @@ void dc::Module::setNumAudioOutputs(size_t numOutputs)
 	{
 		_audioOutputs.push_back(std::make_unique<AudioOutput>(*this, _audioOutputs.size()));
 	}
-	refreshIo(_processBuffer.getNumSamples());
+	refreshBuffers(_buffer.getNumSamples());
 }
 
 bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx)
@@ -118,8 +112,8 @@ bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t t
 	return false;
 }
 
-void dc::Module::refreshIo(size_t bufferSize)
+void dc::Module::refreshBuffers(size_t numSamples)
 {
-	_processBuffer.resize(bufferSize, std::max(_audioInputs.size(), _audioOutputs.size()));
-	onRefreshIo(bufferSize);
+	_buffer.resize(numSamples, std::max(_audioInputs.size(), _audioOutputs.size()));
+	onRefreshBuffers();
 }

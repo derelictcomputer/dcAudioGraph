@@ -62,7 +62,7 @@ int main()
     outputParams.hostApiSpecificStreamInfo = nullptr;
 
     dc::Graph graph;
-    graph.init(64);
+    graph.init(64, 48000);
     graph.setNumAudioInputs(2);
     graph.setNumAudioOutputs(2);
     dc::Module::connectAudio(graph.getAudioInput(), 0, graph.getAudioOutput(), 0);

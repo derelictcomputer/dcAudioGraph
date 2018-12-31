@@ -12,30 +12,21 @@
 
 void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer)
 {
-	for (size_t cIdx = 0; cIdx < _inputBuffer.getNumChannels(); ++cIdx)
-	{
-		if (cIdx < inputBuffer.getNumChannels())
-		{
-			_inputBuffer.copyFrom(inputBuffer, cIdx, cIdx);
-		}
-		else
-		{
-			_inputBuffer.zero(cIdx);
-		}
-	}
+	_inputBuffer.zero();
+	_inputBuffer.copyFrom(inputBuffer, false);
 }
 
 void dc::GraphInputModule::onProcess()
 {
 	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
 	{
-		_processBuffer.copyFrom(_inputBuffer, cIdx, cIdx);
+		_buffer.copyFrom(_inputBuffer, cIdx, cIdx);
 	}
 }
 
-void dc::GraphInputModule::onRefreshIo(size_t bufferSize)
+void dc::GraphInputModule::onRefreshBuffers()
 {
-	_inputBuffer.resize(bufferSize, _processBuffer.getNumChannels());
+	_inputBuffer.resize(_buffer.getNumSamples(), _buffer.getNumChannels());
 }
 
 dc::Graph::Graph()
@@ -44,24 +35,21 @@ dc::Graph::Graph()
 	_outputModule.id = _nextId++;
 }
 
-void dc::Graph::init(size_t bufferSize)
+void dc::Graph::init(size_t bufferSize, double sampleRate)
 {
 	_bufferSize = bufferSize;
-	_inputModule.init(bufferSize);
-	_outputModule.init(bufferSize);
-	for (auto& m : _modules)
-	{
-		m->init(bufferSize);
-	}
-}
+	_sampleRate = sampleRate;
 
-void dc::Graph::teardown()
-{
-	_inputModule.teardown();
-	_outputModule.teardown();
+	_inputModule.setBufferSize(bufferSize);
+	_inputModule.setSampleRate(sampleRate);
+
+	_outputModule.setBufferSize(bufferSize);
+	_outputModule.setSampleRate(sampleRate);
+
 	for (auto& m : _modules)
 	{
-		m->teardown();
+		m->setBufferSize(bufferSize);
+		m->setSampleRate(sampleRate);
 	}
 }
 
@@ -103,9 +91,10 @@ size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 {
 	if (nullptr != module)
 	{
-		module->init(_bufferSize);
 		const size_t id = _nextId++;
 		module->id = id;
+		module->setBufferSize(_bufferSize);
+		module->setSampleRate(_sampleRate);
 		_modules.push_back(std::move(module));
 		return id;
 	}

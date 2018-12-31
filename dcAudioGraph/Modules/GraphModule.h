@@ -23,10 +23,8 @@ public:
 	Graph& getGraph() { return _graph; }
 
 protected:
-	void onInit(size_t bufferSize) override;
-	void onTeardown() override;
 	void onProcess() override;
-	void onRefreshIo(size_t bufferSize) override;
+	void onRefreshBuffers() override;
 
 private:
 	Graph _graph;
