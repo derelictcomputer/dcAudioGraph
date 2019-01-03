@@ -11,7 +11,7 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	g.setNumAudioOutputs(numIo);
 	EXPECT_EQ(g.getNumAudioOutputs(), numIo);
 
-	const auto ptId = g.addModule(std::make_unique<dc::GraphOutputModule>());
+	const auto ptId = g.addModule(std::make_unique<dc::GraphAudioOutputModule>());
 	EXPECT_GT(ptId, 0);
 
 	auto* pt = g.getModuleById(ptId);

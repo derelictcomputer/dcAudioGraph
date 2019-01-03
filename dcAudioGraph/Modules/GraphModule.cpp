@@ -9,6 +9,11 @@
 */
 
 #include "GraphModule.h"
+#include "../ModuleFactory.h"
+
+using json = nlohmann::json;
+
+bool dc::GraphModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
 
 void dc::GraphModule::onProcess()
 {
@@ -23,4 +28,16 @@ void dc::GraphModule::onRefreshBuffers()
 	_graph.init(_buffer.getNumSamples(), _sampleRate);
 	_graph.setNumAudioInputs(getNumAudioInputs());
 	_graph.setNumAudioOutputs(getNumAudioOutputs());
+}
+
+json dc::GraphModule::toJsonInternal() const
+{
+	json j;
+	j["graph"] = _graph.toJson();
+	return j;
+}
+
+void dc::GraphModule::fromJsonInternal(const json& j)
+{
+	_graph.fromJson(j);
 }

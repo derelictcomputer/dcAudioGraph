@@ -13,6 +13,9 @@
     <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp">
       <Filter>dcAudioGraph\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\ModuleFactory.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h">
@@ -26,6 +29,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h">
       <Filter>dcAudioGraph\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\json.hpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\ModuleFactory.h">
+      <Filter>dcAudioGraph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

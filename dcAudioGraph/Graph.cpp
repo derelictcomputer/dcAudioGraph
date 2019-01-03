@@ -9,14 +9,21 @@
 */
 
 #include "Graph.h"
+#include "ModuleFactory.h"
 
-void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer)
+using json = nlohmann::json;
+
+// register the I/O modules
+bool dc::GraphAudioOutputModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
+bool dc::GraphAudioInputModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
+
+void dc::GraphAudioInputModule::setInputData(const AudioBuffer& inputBuffer)
 {
 	_inputBuffer.zero();
 	_inputBuffer.copyFrom(inputBuffer, false);
 }
 
-void dc::GraphInputModule::onProcess()
+void dc::GraphAudioInputModule::onProcess()
 {
 	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
 	{
@@ -24,15 +31,15 @@ void dc::GraphInputModule::onProcess()
 	}
 }
 
-void dc::GraphInputModule::onRefreshBuffers()
+void dc::GraphAudioInputModule::onRefreshBuffers()
 {
 	_inputBuffer.resize(_buffer.getNumSamples(), _buffer.getNumChannels());
 }
 
 dc::Graph::Graph()
 {
-	_inputModule.id = _nextId++;
-	_outputModule.id = _nextId++;
+	_audioInputModule.id = _nextId++;
+	_audioOutputModule.id = _nextId++;
 }
 
 void dc::Graph::init(size_t bufferSize, double sampleRate)
@@ -40,11 +47,11 @@ void dc::Graph::init(size_t bufferSize, double sampleRate)
 	_bufferSize = bufferSize;
 	_sampleRate = sampleRate;
 
-	_inputModule.setBufferSize(bufferSize);
-	_inputModule.setSampleRate(sampleRate);
+	_audioInputModule.setBufferSize(bufferSize);
+	_audioInputModule.setSampleRate(sampleRate);
 
-	_outputModule.setBufferSize(bufferSize);
-	_outputModule.setSampleRate(sampleRate);
+	_audioOutputModule.setBufferSize(bufferSize);
+	_audioOutputModule.setSampleRate(sampleRate);
 
 	for (auto& m : _modules)
 	{
@@ -56,13 +63,13 @@ void dc::Graph::init(size_t bufferSize, double sampleRate)
 void dc::Graph::process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffer)
 {
 	// copy the input buffer to the input module
-	_inputModule.setInputData(inputBuffer);
+	_audioInputModule.setInputData(inputBuffer);
 
 	// process the graph
-	_outputModule.process(++_rev);
+	_audioOutputModule.process(++_rev);
 
 	// copy the graph output to the output buffer
-	auto& gOut = _outputModule.getOutputBuffer();
+	auto& gOut = _audioOutputModule.getOutputBuffer();
 	for (size_t cIdx = 0; cIdx < outputBuffer.getNumChannels(); ++cIdx)
 	{
 		if (cIdx < gOut.getNumChannels())
@@ -78,13 +85,13 @@ void dc::Graph::process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffe
 
 void dc::Graph::setNumAudioInputs(size_t numInputs)
 {
-	_inputModule.setNumAudioOutputs(numInputs);
+	_audioInputModule.setNumAudioOutputs(numInputs);
 }
 
 void dc::Graph::setNumAudioOutputs(size_t numOutputs)
 {
-	_outputModule.setNumAudioInputs(numOutputs);
-	_outputModule.setNumAudioOutputs(numOutputs);
+	_audioOutputModule.setNumAudioInputs(numOutputs);
+	_audioOutputModule.setNumAudioOutputs(numOutputs);
 }
 
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
@@ -122,4 +129,75 @@ dc::Module* dc::Graph::getModuleById(size_t id)
 	}
 
 	return nullptr;
+}
+
+void dc::Graph::removeModuleAt(size_t index)
+{
+	if (index < _modules.size())
+	{
+		_modules.erase(_modules.begin() + index);
+	}
+}
+
+void dc::Graph::removeModuleById(size_t id)
+{
+	for (size_t i = 0; i < _modules.size(); ++i)
+	{
+		if (_modules[i]->id == id)
+		{
+			_modules.erase(_modules.begin() + i);
+			return;
+		}
+	}
+}
+
+void dc::Graph::clear()
+{
+	_modules.clear();
+	// TODO: decide whether we should mess with the graph I/O
+}
+
+json dc::Graph::toJson() const
+{
+	json j;
+
+	j["nextId"] = _nextId;
+	j["audioInputModule"] = _audioInputModule.toJson();
+	j["audioOutputModule"] = _audioOutputModule.toJson();
+	j["modules"] = json::array();
+	for (auto& module : _modules)
+	{
+		j["modules"].push_back(module->toJson());
+	}
+
+	return j;
+}
+
+void dc::Graph::fromJson(const json& j)
+{
+	clear();
+
+	_nextId = j["nextId"].get<size_t>();
+	_audioInputModule.fromJson(j["audioInputModule"]);
+	_audioOutputModule.fromJson(j["audioOutputModule"]);
+
+	// first, create all the modules
+	auto modules = j["modules"];
+	for (auto& module : modules)
+	{
+		auto instance = Module::createFromJson(module);
+		if (nullptr != instance)
+		{
+			addModule(std::move(instance));
+		}
+	}
+	// now, connect them
+	for (auto module : j["modules"])
+	{
+		const size_t graphId = module["graphId"].get<size_t>();
+		if (auto* instance = getModuleById(graphId))
+		{
+			instance->updateConnectionsFromJson(module, *this);
+		}
+	}
 }

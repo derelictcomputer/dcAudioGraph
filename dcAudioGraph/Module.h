@@ -12,9 +12,13 @@
 #include <vector>
 #include <memory>
 #include "AudioBuffer.h"
+#include "json.hpp"
 
 namespace dc
 {
+using json = nlohmann::json;
+class Graph;
+
 class Module
 {
 public:
@@ -33,17 +37,34 @@ public:
 
 	static bool connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
 
+	json toJson() const;
+	static std::unique_ptr<Module> createFromJson(const json& j);
+	void fromJson(const json& j);
+	void updateConnectionsFromJson(const json& j, Graph& parentGraph);
+
 	size_t id = 0;
 
 protected:
 	virtual void onProcess() {}
 	virtual void onRefreshBuffers() {}
 
+	virtual nlohmann::json toJsonInternal() const = 0;
+	virtual void fromJsonInternal(const nlohmann::json& j) = 0;
+
+	virtual std::string getModuleIdForInstance() const = 0;
+
 	AudioBuffer _buffer;
 	double _sampleRate = 0;
 
 private:
-	struct AudioOutput;
+	struct AudioOutput
+	{
+		explicit AudioOutput(Module& parent, size_t index) : parent(parent), index(index) {}
+		~AudioOutput() = default;
+
+		Module& parent;
+		size_t index;
+	};
 
 	struct AudioInput
 	{
@@ -52,15 +73,6 @@ private:
 
 		Module& parent;
 		std::vector<std::weak_ptr<AudioOutput>> outputs;
-	};
-
-	struct AudioOutput
-	{
-		explicit AudioOutput(Module& parent, size_t index) : parent(parent), index(index) {}
-		~AudioOutput() = default;
-
-		Module& parent;
-		size_t index;
 	};
 
 	void refreshBuffers(size_t numSamples);
