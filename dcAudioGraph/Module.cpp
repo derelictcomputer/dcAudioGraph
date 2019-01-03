@@ -9,7 +9,10 @@
 */
 
 #include "Module.h"
-#include <algorithm>
+#include "Graph.h"
+#include "ModuleFactory.h"
+
+using json = nlohmann::json;
 
 void dc::Module::setBufferSize(size_t bufferSize)
 {
@@ -110,6 +113,78 @@ bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t t
 		}
 	}
 	return false;
+}
+
+json dc::Module::toJson() const
+{
+	json j;
+	j["moduleId"] = getModuleIdForInstance();
+	j["graphId"] = id;
+	
+	// audio inputs
+	j["audioInputs"] = json::array();
+	for (auto& input : _audioInputs)
+	{
+		json i;
+		for (auto& output : input->outputs)
+		{
+			if (auto oP = output.lock())
+			{
+				i.push_back({{"graphId", oP->parent.id}, {"index", oP->index}});
+			}
+		}
+		j["audioInputs"].push_back(i);
+	}
+	
+	// audio outputs
+	j["numAudioOutputs"] = getNumAudioOutputs();
+
+	// settings for concrete modules
+	j["settings"] = toJsonInternal();
+
+	return j;
+}
+
+std::unique_ptr<dc::Module> dc::Module::createFromJson(const json& j)
+{
+	std::string moduleId = j["moduleId"];
+	auto instance = ModuleFactory::create(moduleId);
+	if (nullptr != instance)
+	{
+		instance->fromJson(j);
+	}
+	return instance;
+}
+
+void dc::Module::fromJson(const json& j)
+{
+	// do the common module stuff first, in case the specific config depends on that
+	id = j["graphId"].get<size_t>();
+	// audio inputs
+	auto inputInfo = j["audioInputs"];
+	setNumAudioInputs(inputInfo.size());
+	setNumAudioOutputs(j["numAudioOutputs"]);
+	// NOTE: we will make the connections after all nodes have been configured for the parent graph
+
+	fromJsonInternal(j);
+}
+
+void dc::Module::updateConnectionsFromJson(const json& j, Graph& parentGraph)
+{
+	auto inputs = j["audioInputs"];
+	for (int i = 0; i < inputs.size(); ++i)
+	{
+		auto outputs = inputs[i];
+		for (auto& output : outputs)
+		{
+			const size_t parentId = output["graphId"].get<size_t>();
+			if (auto* module = parentGraph.getModuleById(parentId))
+			{
+				const size_t outputIdx = output["index"].get<size_t>();
+				connectAudio(module, outputIdx, this, i);
+			}
+		}
+	}
 }
 
 void dc::Module::refreshBuffers(size_t numSamples)
