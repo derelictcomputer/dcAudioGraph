@@ -8,7 +8,7 @@
  */
 
 #include "../portaudio/include/portaudio.h"
-#include "../../dcAudioGraph/Graph.h"
+#include "../../dcAudioGraph/dcAudioGraph.h"
 
 dc::AudioBuffer inBuf, outBuf;
 

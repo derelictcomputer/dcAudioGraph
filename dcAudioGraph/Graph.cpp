@@ -9,13 +9,8 @@
 */
 
 #include "Graph.h"
-#include "ModuleFactory.h"
 
 using json = nlohmann::json;
-
-// register the I/O modules
-bool dc::GraphAudioOutputModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
-bool dc::GraphAudioInputModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
 
 void dc::GraphAudioInputModule::setInputData(const AudioBuffer& inputBuffer)
 {
@@ -120,6 +115,16 @@ dc::Module* dc::Graph::getModuleAt(size_t index)
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
+	if (_audioInputModule.id == id)
+	{
+		return &_audioInputModule;
+	}
+
+	if (_audioOutputModule.id == id)
+	{
+		return &_audioOutputModule;
+	}
+
 	for (auto& m : _modules)
 	{
 		if (m->id == id)
@@ -177,7 +182,6 @@ void dc::Graph::fromJson(const json& j)
 {
 	clear();
 
-	_nextId = j["nextId"].get<size_t>();
 	_audioInputModule.fromJson(j["audioInputModule"]);
 	_audioOutputModule.fromJson(j["audioOutputModule"]);
 
@@ -194,10 +198,15 @@ void dc::Graph::fromJson(const json& j)
 	// now, connect them
 	for (auto module : j["modules"])
 	{
-		const size_t graphId = module["graphId"].get<size_t>();
+		const size_t graphId = module["_graphId"].get<size_t>();
 		if (auto* instance = getModuleById(graphId))
 		{
 			instance->updateConnectionsFromJson(module, *this);
 		}
 	}
+	// also connect the input and output modules
+	_audioInputModule.updateConnectionsFromJson(j["audioInputModule"], *this);
+	_audioOutputModule.updateConnectionsFromJson(j["audioOutputModule"], *this);
+
+	_nextId = j["nextId"].get<size_t>();
 }

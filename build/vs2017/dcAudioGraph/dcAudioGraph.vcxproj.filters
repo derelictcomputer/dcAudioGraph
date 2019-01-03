@@ -13,7 +13,7 @@
     <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp">
       <Filter>dcAudioGraph\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\dcAudioGraph\ModuleFactory.cpp">
+    <ClCompile Include="..\..\..\dcAudioGraph\dcAudioGraph.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
   </ItemGroup>
@@ -33,7 +33,7 @@
     <ClInclude Include="..\..\..\dcAudioGraph\json.hpp">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\dcAudioGraph\ModuleFactory.h">
+    <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
   </ItemGroup>

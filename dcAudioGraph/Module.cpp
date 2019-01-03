@@ -10,7 +10,6 @@
 
 #include "Module.h"
 #include "Graph.h"
-#include "ModuleFactory.h"
 
 using json = nlohmann::json;
 
@@ -118,26 +117,30 @@ bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t t
 json dc::Module::toJson() const
 {
 	json j;
-	j["moduleId"] = getModuleIdForInstance();
-	j["graphId"] = id;
+	j["_moduleId"] = getModuleIdForInstance();
+	j["_graphId"] = id;
 	
-	// audio inputs
-	j["audioInputs"] = json::array();
-	for (auto& input : _audioInputs)
+	// audio I/O
+	j["numAudioInputs"] = getNumAudioInputs();
+	j["numAudioOutputs"] = getNumAudioOutputs();
+
+	// audio input connections
+	auto ic = json::array();
+	for (size_t i = 0; i < getNumAudioInputs(); ++i)
 	{
-		json i;
-		for (auto& output : input->outputs)
+		for (auto& output : _audioInputs[i]->outputs)
 		{
 			if (auto oP = output.lock())
 			{
-				i.push_back({{"graphId", oP->parent.id}, {"index", oP->index}});
+				ic.push_back({ 
+					{"inputIndex", i}, 
+					{"outputGraphId", oP->parent.id}, 
+					{"outputIndex", oP->index} 
+				});
 			}
 		}
-		j["audioInputs"].push_back(i);
 	}
-	
-	// audio outputs
-	j["numAudioOutputs"] = getNumAudioOutputs();
+	j["audioInputConnections"] = ic;
 
 	// settings for concrete modules
 	j["settings"] = toJsonInternal();
@@ -147,7 +150,7 @@ json dc::Module::toJson() const
 
 std::unique_ptr<dc::Module> dc::Module::createFromJson(const json& j)
 {
-	std::string moduleId = j["moduleId"];
+	std::string moduleId = j["_moduleId"].get<std::string>();
 	auto instance = ModuleFactory::create(moduleId);
 	if (nullptr != instance)
 	{
@@ -159,30 +162,29 @@ std::unique_ptr<dc::Module> dc::Module::createFromJson(const json& j)
 void dc::Module::fromJson(const json& j)
 {
 	// do the common module stuff first, in case the specific config depends on that
-	id = j["graphId"].get<size_t>();
+	id = j["_graphId"].get<size_t>();
+	
 	// audio inputs
-	auto inputInfo = j["audioInputs"];
-	setNumAudioInputs(inputInfo.size());
-	setNumAudioOutputs(j["numAudioOutputs"]);
+	setNumAudioInputs(j["numAudioInputs"].get<size_t>());
+	setNumAudioOutputs(j["numAudioOutputs"].get<size_t>());
+
 	// NOTE: we will make the connections after all nodes have been configured for the parent graph
 
-	fromJsonInternal(j);
+	fromJsonInternal(j["settings"]);
 }
 
 void dc::Module::updateConnectionsFromJson(const json& j, Graph& parentGraph)
 {
-	auto inputs = j["audioInputs"];
-	for (int i = 0; i < inputs.size(); ++i)
+	auto connections = j["audioInputConnections"];
+
+	for (auto c : connections)
 	{
-		auto outputs = inputs[i];
-		for (auto& output : outputs)
+		const size_t inputIdx = c["inputIndex"].get<size_t>();
+		const size_t outputModuleId = c["outputGraphId"].get<size_t>();
+		const size_t outputIdx = c["outputIndex"].get<size_t>();
+		if (auto* other = parentGraph.getModuleById(outputModuleId))
 		{
-			const size_t parentId = output["graphId"].get<size_t>();
-			if (auto* module = parentGraph.getModuleById(parentId))
-			{
-				const size_t outputIdx = output["index"].get<size_t>();
-				connectAudio(module, outputIdx, this, i);
-			}
+			connectAudio(other, outputIdx, this, inputIdx);
 		}
 	}
 }
@@ -191,4 +193,27 @@ void dc::Module::refreshBuffers(size_t numSamples)
 {
 	_buffer.resize(numSamples, std::max(_audioInputs.size(), _audioOutputs.size()));
 	onRefreshBuffers();
+}
+
+std::map<std::string, dc::ModuleFactory::ModuleCreateMethod> dc::ModuleFactory::_moduleCreateMethods;
+
+bool dc::ModuleFactory::registerModule(const std::string& name, ModuleCreateMethod moduleCreateMethod)
+{
+	const auto it = _moduleCreateMethods.find(name);
+	if (it == _moduleCreateMethods.end())
+	{
+		_moduleCreateMethods[name] = moduleCreateMethod;
+		return true;
+	}
+	return false;
+}
+
+std::unique_ptr<dc::Module> dc::ModuleFactory::create(const std::string& name)
+{
+	const auto it = _moduleCreateMethods.find(name);
+	if (it == _moduleCreateMethods.end())
+	{
+		return nullptr;
+	}
+	return it->second();
 }

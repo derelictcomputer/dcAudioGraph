@@ -9,11 +9,8 @@
 */
 
 #include "GraphModule.h"
-#include "../ModuleFactory.h"
 
 using json = nlohmann::json;
-
-bool dc::GraphModule::_registered = ModuleFactory::registerModule(getModuleId(), createMethod);
 
 void dc::GraphModule::onProcess()
 {
@@ -39,5 +36,5 @@ json dc::GraphModule::toJsonInternal() const
 
 void dc::GraphModule::fromJsonInternal(const json& j)
 {
-	_graph.fromJson(j);
+	_graph.fromJson(j["graph"]);
 }

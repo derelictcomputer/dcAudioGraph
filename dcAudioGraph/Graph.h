@@ -19,22 +19,23 @@ namespace dc
 // Note: this module is really just a passthrough, but it helps for clarity
 class GraphAudioOutputModule : public Module
 {
+public:
+	// convenience method for getting the unique id of the module type
+	static std::string getModuleId() { return "dc.GraphAudioOutputModule"; }
+
 protected:
 	json toJsonInternal() const override { return nullptr; }
 	void fromJsonInternal(const json& j) override {}
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
-
-private:
-	// register with the ModuleFactory so we can deserialize
-	static std::unique_ptr<Module> createMethod() { return std::make_unique<GraphAudioOutputModule>(); }
-	static std::string getModuleId() { return "dc.GraphAudioOutputModule"; }
-	static bool _registered;
 };
 
 // a module for input into a graph
 class GraphAudioInputModule : public Module
 {
 public:
+	// convenience method for getting the unique id of the module type
+	static std::string getModuleId() { return "dc.GraphAudioInputModule"; }
+
 	void setInputData(const AudioBuffer& inputBuffer);
 
 protected:
@@ -47,11 +48,6 @@ protected:
 
 private:
 	AudioBuffer _inputBuffer;
-
-	// register with the ModuleFactory so we can deserialize
-	static std::unique_ptr<Module> createMethod() { return std::make_unique<GraphAudioInputModule>(); }
-	static std::string getModuleId() { return "dc.GraphAudioInputModule"; }
-	static bool _registered;
 };
 
 class Graph

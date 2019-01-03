@@ -21,6 +21,9 @@ public:
 	GraphModule() = default;
 	~GraphModule() override = default;
 
+	// convenience method for getting the unique id of the module type
+	static std::string getModuleId() { return "dc.GraphModule"; }
+
 	Graph& getGraph() { return _graph; }
 
 protected:
@@ -33,10 +36,5 @@ protected:
 
 private:
 	Graph _graph;
-
-	// register with the ModuleFactory so we can deserialize
-	static std::unique_ptr<Module> createMethod() { return std::make_unique<GraphModule>(); }
-	static std::string getModuleId() { return "dc.GraphModule"; }
-	static bool _registered;
 };
 }
