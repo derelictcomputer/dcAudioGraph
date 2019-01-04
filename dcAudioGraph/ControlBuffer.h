@@ -63,6 +63,7 @@ public:
 	explicit ControlBuffer(size_t maxSize);
 
 	size_t size() const { return _messages.size(); };
+	size_t maxSize() const { return _maxSize; }
 	void insert(ControlMessage message);
 	void merge(ControlBuffer& other);
 	void clear();

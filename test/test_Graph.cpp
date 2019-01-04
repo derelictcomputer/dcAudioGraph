@@ -10,7 +10,7 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	g.setNumAudioOutputs(numIo);
 	EXPECT_EQ(g.getNumAudioOutputs(), numIo);
 
-	const auto ptId = g.addModule(std::make_unique<dc::GraphAudioOutputModule>());
+	const auto ptId = g.addModule(std::make_unique<dc::GraphOutputModule>());
 	EXPECT_GT(ptId, 0);
 
 	auto* pt = g.getModuleById(ptId);
@@ -21,9 +21,9 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	pt->setNumAudioOutputs(numIo);
 	EXPECT_EQ(pt->getNumAudioOutputs(), numIo);
 
-	auto* aIn = g.getAudioInput();
+	auto* aIn = g.getInputModule();
 	ASSERT_NE(aIn, nullptr);
-	auto* aOut = g.getAudioOutput();
+	auto* aOut = g.getOutputModule();
 	ASSERT_NE(aOut, nullptr);
 
 	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
@@ -43,10 +43,13 @@ TEST(Graph, GraphIOBasic)
 	inBuffer.fill(testValue);
 	AudioBuffer outBuffer(numSamples, numIo);
 
+	std::vector<dc::ControlBuffer> inCBuf;
+	std::vector<dc::ControlBuffer> outCBuf;
+
 	Graph g;
 	makeBasicGraph(g, numIo);
 	g.init(numSamples, 44100);
-	g.process(inBuffer, outBuffer);
+	g.process(inBuffer, outBuffer, inCBuf, outCBuf);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 }
 
@@ -60,13 +63,16 @@ TEST(Graph, GraphIOBasic_Loop)
 	inBuffer.fill(testValue);
 	AudioBuffer outBuffer(numSamples, numIo);
 
+	std::vector<dc::ControlBuffer> inCBuf;
+	std::vector<dc::ControlBuffer> outCBuf;
+
 	Graph g;
 	makeBasicGraph(g, numIo);
 	g.init(numSamples, 44100);
 
 	for (int i = 0; i < 1000; ++i)
 	{
-		g.process(inBuffer, outBuffer);
+		g.process(inBuffer, outBuffer, inCBuf, outCBuf);
 		ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 	}
 }
@@ -83,8 +89,8 @@ TEST(Graph, TestSerialization)
 	g.setNumAudioInputs(numIo);
 	g.setNumAudioOutputs(numIo);
 
-	auto* aIn = g.getAudioInput();
-	auto* aOut = g.getAudioOutput();
+	auto* aIn = g.getInputModule();
+	auto* aOut = g.getOutputModule();
 
 	const size_t gmId = g.addModule(std::make_unique<GraphModule>());
 	auto* gm = dynamic_cast<GraphModule*>(g.getModuleById(gmId));
@@ -92,8 +98,8 @@ TEST(Graph, TestSerialization)
 	gm->setNumAudioInputs(numIo);
 	gm->setNumAudioOutputs(numIo);
 
-	auto* gAIn = gm->getGraph().getAudioInput();
-	auto* gAOut = gm->getGraph().getAudioOutput();
+	auto* gAIn = gm->getGraph().getInputModule();
+	auto* gAOut = gm->getGraph().getOutputModule();
 
 	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
 	{
@@ -127,8 +133,8 @@ TEST(Graph, TestSerializationWithRemove)
 	g.setNumAudioInputs(numIo);
 	g.setNumAudioOutputs(numIo);
 
-	auto* aIn = g.getAudioInput();
-	auto* aOut = g.getAudioOutput();
+	auto* aIn = g.getInputModule();
+	auto* aOut = g.getOutputModule();
 
 	size_t gmId = g.addModule(std::make_unique<GraphModule>());
 	auto* gm = dynamic_cast<GraphModule*>(g.getModuleById(gmId));
@@ -136,8 +142,8 @@ TEST(Graph, TestSerializationWithRemove)
 	gm->setNumAudioInputs(numIo);
 	gm->setNumAudioOutputs(numIo);
 
-	auto* gAIn = gm->getGraph().getAudioInput();
-	auto* gAOut = gm->getGraph().getAudioOutput();
+	auto* gAIn = gm->getGraph().getInputModule();
+	auto* gAOut = gm->getGraph().getOutputModule();
 
 	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
 	{
@@ -155,8 +161,11 @@ TEST(Graph, TestSerializationWithRemove)
 		AudioBuffer inBuffer(bufferSize, numIo);
 		inBuffer.fill(testValue);
 		AudioBuffer outBuffer(bufferSize, numIo);
+		std::vector<dc::ControlBuffer> inCBuf;
+		std::vector<dc::ControlBuffer> outCBuf;
+
 		g.init(bufferSize, 44100);
-		g.process(inBuffer, outBuffer);
+		g.process(inBuffer, outBuffer, inCBuf, outCBuf);
 	}
 
 	gmId = g.addModule(std::make_unique<GraphModule>(), gmId);

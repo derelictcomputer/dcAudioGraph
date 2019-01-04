@@ -12,29 +12,50 @@
 
 using json = nlohmann::json;
 
-void dc::GraphAudioInputModule::setInputData(const AudioBuffer& inputBuffer)
+void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, std::vector<ControlBuffer>& controlBuffers)
 {
-	_inputBuffer.zero();
-	_inputBuffer.copyFrom(inputBuffer, false);
-}
+	_inputAudioBuffer.zero();
+	_inputAudioBuffer.copyFrom(inputBuffer, false);
 
-void dc::GraphAudioInputModule::onProcess()
-{
-	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
+	for (size_t i = 0; i < controlBuffers.size(); ++i)
 	{
-		_audioBuffer.copyFrom(_inputBuffer, cIdx, cIdx);
+		if (i < _inputControlBuffers.size())
+		{
+			_inputControlBuffers[i].clear();
+			_inputControlBuffers[i].merge(controlBuffers[i]);
+		}
 	}
 }
 
-void dc::GraphAudioInputModule::onRefreshAudioBuffers()
+void dc::GraphInputModule::onProcess()
 {
-	_inputBuffer.resize(_audioBuffer.getNumSamples(), _audioBuffer.getNumChannels());
+	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
+	{
+		_audioBuffer.copyFrom(_inputAudioBuffer, cIdx, cIdx);
+	}
+}
+
+void dc::GraphInputModule::onRefreshAudioBuffers()
+{
+	_inputAudioBuffer.resize(_audioBuffer.getNumSamples(), _audioBuffer.getNumChannels());
+}
+
+void dc::GraphInputModule::onRefreshControlBuffers()
+{
+	while (_controlBuffers.size() < _inputControlBuffers.size())
+	{
+		_inputControlBuffers.pop_back();
+	}
+	while (_controlBuffers.size() > _inputControlBuffers.size())
+	{
+		_inputControlBuffers.emplace_back(_controlBuffers[0].maxSize());
+	}
 }
 
 dc::Graph::Graph()
 {
-	_audioInputModule.id = _nextId++;
-	_audioOutputModule.id = _nextId++;
+	_inputModule.id = _nextId++;
+	_outputModule.id = _nextId++;
 }
 
 void dc::Graph::init(size_t bufferSize, double sampleRate)
@@ -42,11 +63,11 @@ void dc::Graph::init(size_t bufferSize, double sampleRate)
 	_bufferSize = bufferSize;
 	_sampleRate = sampleRate;
 
-	_audioInputModule.setBufferSize(bufferSize);
-	_audioInputModule.setSampleRate(sampleRate);
+	_inputModule.setBufferSize(bufferSize);
+	_inputModule.setSampleRate(sampleRate);
 
-	_audioOutputModule.setBufferSize(bufferSize);
-	_audioOutputModule.setSampleRate(sampleRate);
+	_outputModule.setBufferSize(bufferSize);
+	_outputModule.setSampleRate(sampleRate);
 
 	for (auto& m : _modules)
 	{
@@ -55,38 +76,50 @@ void dc::Graph::init(size_t bufferSize, double sampleRate)
 	}
 }
 
-void dc::Graph::process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffer)
+void dc::Graph::process(const AudioBuffer& audioInBuffer, AudioBuffer& audioOutBuffer,
+	std::vector<ControlBuffer>& controlInBuffers, std::vector<ControlBuffer>& controlOutBuffers)
 {
-	// copy the input buffer to the input module
-	_audioInputModule.setInputData(inputBuffer);
+	// copy the input buffers to the input module
+	_inputModule.setInputData(audioInBuffer, controlInBuffers);
 
 	// process the graph
-	_audioOutputModule.process(++_rev);
+	_outputModule.process(++_rev);
 
 	// copy the graph output to the output buffer
-	auto& gOut = _audioOutputModule.getAudioOutputBuffer();
-	for (size_t cIdx = 0; cIdx < outputBuffer.getNumChannels(); ++cIdx)
+	audioOutBuffer.zero();
+	audioOutBuffer.copyFrom(_outputModule.getAudioOutputBuffer(), false);
+
+	for (size_t i = 0; i < controlOutBuffers.size(); ++i)
 	{
-		if (cIdx < gOut.getNumChannels())
+		controlOutBuffers[i].clear();
+
+		if (auto* b = _outputModule.getControlOutputBuffer(i))
 		{
-			outputBuffer.copyFrom(gOut, cIdx, cIdx);
-		}
-		else
-		{
-			outputBuffer.zero(cIdx);
+			controlOutBuffers[i].merge(*b);
 		}
 	}
 }
 
 void dc::Graph::setNumAudioInputs(size_t numInputs)
 {
-	_audioInputModule.setNumAudioOutputs(numInputs);
+	_inputModule.setNumAudioOutputs(numInputs);
 }
 
 void dc::Graph::setNumAudioOutputs(size_t numOutputs)
 {
-	_audioOutputModule.setNumAudioInputs(numOutputs);
-	_audioOutputModule.setNumAudioOutputs(numOutputs);
+	_outputModule.setNumAudioInputs(numOutputs);
+	_outputModule.setNumAudioOutputs(numOutputs);
+}
+
+void dc::Graph::setNumControlInputs(size_t numInputs)
+{
+	_inputModule.setNumControlOutputs(numInputs);
+}
+
+void dc::Graph::setNumControlOutputs(size_t numOutputs)
+{
+	_outputModule.setNumControlInputs(numOutputs);
+	_outputModule.setNumControlOutputs(numOutputs);
 }
 
 size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t index)
@@ -115,14 +148,14 @@ dc::Module* dc::Graph::getModuleAt(size_t index)
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
-	if (_audioInputModule.id == id)
+	if (_inputModule.id == id)
 	{
-		return &_audioInputModule;
+		return &_inputModule;
 	}
 
-	if (_audioOutputModule.id == id)
+	if (_outputModule.id == id)
 	{
-		return &_audioOutputModule;
+		return &_outputModule;
 	}
 
 	for (auto& m : _modules)
@@ -171,8 +204,8 @@ json dc::Graph::toJson() const
 {
 	json j;
 
-	j[S_AUDIO_INPUT_MODULE] = _audioInputModule.toJson();
-	j[S_AUDIO_OUTPUT_MODULE] = _audioOutputModule.toJson();
+	j[S_AUDIO_INPUT_MODULE] = _inputModule.toJson();
+	j[S_AUDIO_OUTPUT_MODULE] = _outputModule.toJson();
 	
 	auto m = json::array();
 	for (auto& module : _modules)
@@ -188,8 +221,8 @@ void dc::Graph::fromJson(const json& j)
 {
 	clear();
 
-	_audioInputModule.fromJson(j[S_AUDIO_INPUT_MODULE]);
-	_audioOutputModule.fromJson(j[S_AUDIO_OUTPUT_MODULE]);
+	_inputModule.fromJson(j[S_AUDIO_INPUT_MODULE]);
+	_outputModule.fromJson(j[S_AUDIO_OUTPUT_MODULE]);
 
 	// first, create all the modules
 	auto modules = j[S_MODULES];
@@ -216,8 +249,8 @@ void dc::Graph::fromJson(const json& j)
 void dc::Graph::compressIds()
 {
 	_nextId = 1;
-	_audioInputModule.id = _nextId++;
-	_audioOutputModule.id = _nextId++;
+	_inputModule.id = _nextId++;
+	_outputModule.id = _nextId++;
 	for (auto& m : _modules)
 	{
 		m->id = _nextId++;

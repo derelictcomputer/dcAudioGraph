@@ -17,7 +17,7 @@ void dc::GraphModule::onProcess()
 	// we know that the Graph processes the input buffer first,
 	// then copies the result to the output buffer, so we can just
 	// pass the process buffer in as both
-	_graph.process(_audioBuffer, _audioBuffer);
+	_graph.process(_audioBuffer, _audioBuffer, _controlBuffers, _controlBuffers);
 }
 
 void dc::GraphModule::onRefreshAudioBuffers()

@@ -4,8 +4,8 @@ void dc::registerBuiltInModules()
 {
 #define moduleCreateFn(moduleType) []{ return std::make_unique<moduleType>(); }
 
-	ModuleFactory::registerModule(GraphAudioInputModule::getModuleId(), moduleCreateFn(GraphAudioInputModule));
-	ModuleFactory::registerModule(GraphAudioOutputModule::getModuleId(), moduleCreateFn(GraphAudioOutputModule));
+	ModuleFactory::registerModule(GraphInputModule::getModuleId(), moduleCreateFn(GraphInputModule));
+	ModuleFactory::registerModule(GraphOutputModule::getModuleId(), moduleCreateFn(GraphOutputModule));
 	ModuleFactory::registerModule(GraphModule::getModuleId(), moduleCreateFn(GraphModule));
 
 #undef moduleCreateFn

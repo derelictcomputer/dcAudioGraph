@@ -17,7 +17,7 @@ namespace dc
 {
 // a module for output from a graph
 // Note: this module is really just a passthrough, but it helps for clarity
-class GraphAudioOutputModule final : public Module
+class GraphOutputModule final : public Module
 {
 public:
 	// convenience method for getting the unique id of the module type
@@ -30,24 +30,26 @@ protected:
 };
 
 // a module for input into a graph
-class GraphAudioInputModule final : public Module
+class GraphInputModule final : public Module
 {
 public:
 	// convenience method for getting the unique id of the module type
 	static std::string getModuleId() { return "dc.GraphAudioInputModule"; }
 
-	void setInputData(const AudioBuffer& inputBuffer);
+	void setInputData(const AudioBuffer& inputBuffer, std::vector<ControlBuffer>& controlBuffers);
 
 protected:
 	void onProcess() override;
 	void onRefreshAudioBuffers() override;
+	void onRefreshControlBuffers() override;
 
 	json toJsonInternal() const override { return nullptr; }
 	void fromJsonInternal(const json& j) override {}
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:
-	AudioBuffer _inputBuffer;
+	AudioBuffer _inputAudioBuffer;
+	std::vector<ControlBuffer> _inputControlBuffers;
 };
 
 class Graph
@@ -57,14 +59,22 @@ public:
 	~Graph() = default;
 
 	void init(size_t bufferSize, double sampleRate);
-	void process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffer);
+	void process(
+		const AudioBuffer& audioInBuffer, AudioBuffer& audioOutBuffer, 
+		std::vector<ControlBuffer>& controlInBuffers, std::vector<ControlBuffer>& controlOutBuffers);
 
-	size_t getNumAudioInputs() const { return _audioInputModule.getNumAudioOutputs(); }
+	size_t getNumAudioInputs() const { return _inputModule.getNumAudioOutputs(); }
 	void setNumAudioInputs(size_t numInputs);
-	Module* getAudioInput() { return &_audioInputModule; }
-	size_t getNumAudioOutputs() const { return _audioOutputModule.getNumAudioOutputs(); }
+	size_t getNumAudioOutputs() const { return _outputModule.getNumAudioOutputs(); }
 	void setNumAudioOutputs(size_t numOutputs);
-	Module* getAudioOutput() { return &_audioOutputModule; }
+
+	size_t getNumControlInputs() const { return _inputModule.getNumControlOutputs(); }
+	void setNumControlInputs(size_t numInputs);
+	size_t getNumControlOutputs() const { return _outputModule.getNumControlOutputs(); }
+	void setNumControlOutputs(size_t numOutputs);
+	
+	Module* getInputModule() { return &_inputModule; }
+	Module* getOutputModule() { return &_outputModule; }
 
 	size_t addModule(std::unique_ptr<Module> module, size_t index = 0);
 	size_t getNumModules() const { return _modules.size(); }
@@ -82,8 +92,8 @@ private:
 	void compressIds();
 
 	// serializable
-	GraphAudioInputModule _audioInputModule;
-	GraphAudioOutputModule _audioOutputModule;
+	GraphInputModule _inputModule;
+	GraphOutputModule _outputModule;
 	std::vector<std::unique_ptr<Module>> _modules;
 	
 	// internals

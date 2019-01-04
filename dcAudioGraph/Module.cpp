@@ -31,21 +31,22 @@ void dc::Module::process(size_t rev)
 	_rev = rev;
 
 	// pull in control data
-	// Note: we assume there are enough control buffers for the inputs
-	// TODO: safety checks for debug builds
 	{
-		for (size_t i = 0; i < _controlInputs.size(); ++i)
+		for (size_t i = 0; i < _controlBuffers.size(); ++i)
 		{
 			_controlBuffers[i].clear();
 
-			// merge data if there are multiple connections
-			for (auto& connectedOutput : _controlInputs[i]->outputs)
+			if (i < _controlInputs.size())
 			{
-				if (auto oPtr = connectedOutput.lock())
+				// merge data if there are multiple connections
+				for (auto& connectedOutput : _controlInputs[i]->outputs)
 				{
-					if (auto* buffer = oPtr->parent.getControlOutputBuffer(oPtr->index))
+					if (auto oPtr = connectedOutput.lock())
 					{
-						_controlBuffers[i].merge(*buffer);
+						if (auto* buffer = oPtr->parent.getControlOutputBuffer(oPtr->index))
+						{
+							_controlBuffers[i].merge(*buffer);
+						}
 					}
 				}
 			}

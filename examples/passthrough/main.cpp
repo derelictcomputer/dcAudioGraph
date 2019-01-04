@@ -11,6 +11,8 @@
 #include "../../dcAudioGraph/dcAudioGraph.h"
 
 dc::AudioBuffer inBuf, outBuf;
+std::vector<dc::ControlBuffer> inCBuf;
+std::vector<dc::ControlBuffer> outCBuf;
 
 int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData)
@@ -21,7 +23,7 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
     inBuf.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), false);
 	outBuf.zero();
-    graph->process(inBuf, outBuf);
+    graph->process(inBuf, outBuf, inCBuf, outCBuf);
 	outBuf.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
 	return paContinue;
 }
@@ -73,8 +75,8 @@ int main()
     graph.init(64, 48000);
     graph.setNumAudioInputs(2);
     graph.setNumAudioOutputs(2);
-    dc::Module::connectAudio(graph.getAudioInput(), 0, graph.getAudioOutput(), 0);
-    dc::Module::connectAudio(graph.getAudioInput(), 1, graph.getAudioOutput(), 1);
+    dc::Module::connectAudio(graph.getInputModule(), 0, graph.getOutputModule(), 0);
+    dc::Module::connectAudio(graph.getInputModule(), 1, graph.getOutputModule(), 1);
 
     PaStream* stream;
     error = Pa_OpenStream(&stream, &inputParams, &outputParams, 48000, 64, 0, audioDeviceCallback, &graph);
