@@ -28,7 +28,7 @@ public:
 
 protected:
 	void onProcess() override;
-	void onRefreshBuffers() override;
+	void onRefreshAudioBuffers() override;
 
 	json toJsonInternal() const override;
 	void fromJsonInternal(const json& j) override;

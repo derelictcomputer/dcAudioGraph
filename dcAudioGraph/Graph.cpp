@@ -22,13 +22,13 @@ void dc::GraphAudioInputModule::onProcess()
 {
 	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
 	{
-		_buffer.copyFrom(_inputBuffer, cIdx, cIdx);
+		_audioBuffer.copyFrom(_inputBuffer, cIdx, cIdx);
 	}
 }
 
-void dc::GraphAudioInputModule::onRefreshBuffers()
+void dc::GraphAudioInputModule::onRefreshAudioBuffers()
 {
-	_inputBuffer.resize(_buffer.getNumSamples(), _buffer.getNumChannels());
+	_inputBuffer.resize(_audioBuffer.getNumSamples(), _audioBuffer.getNumChannels());
 }
 
 dc::Graph::Graph()
@@ -64,7 +64,7 @@ void dc::Graph::process(const AudioBuffer& inputBuffer, AudioBuffer& outputBuffe
 	_audioOutputModule.process(++_rev);
 
 	// copy the graph output to the output buffer
-	auto& gOut = _audioOutputModule.getOutputBuffer();
+	auto& gOut = _audioOutputModule.getAudioOutputBuffer();
 	for (size_t cIdx = 0; cIdx < outputBuffer.getNumChannels(); ++cIdx)
 	{
 		if (cIdx < gOut.getNumChannels())

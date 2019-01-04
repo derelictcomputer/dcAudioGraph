@@ -16,6 +16,9 @@
     <ClCompile Include="..\..\..\dcAudioGraph\dcAudioGraph.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h">
@@ -34,6 +37,9 @@
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\ControlBuffer.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
   </ItemGroup>

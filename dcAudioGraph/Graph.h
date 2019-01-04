@@ -17,7 +17,7 @@ namespace dc
 {
 // a module for output from a graph
 // Note: this module is really just a passthrough, but it helps for clarity
-class GraphAudioOutputModule : public Module
+class GraphAudioOutputModule final : public Module
 {
 public:
 	// convenience method for getting the unique id of the module type
@@ -30,7 +30,7 @@ protected:
 };
 
 // a module for input into a graph
-class GraphAudioInputModule : public Module
+class GraphAudioInputModule final : public Module
 {
 public:
 	// convenience method for getting the unique id of the module type
@@ -39,8 +39,8 @@ public:
 	void setInputData(const AudioBuffer& inputBuffer);
 
 protected:
-	void onProcess() final;
-	void onRefreshBuffers() override;
+	void onProcess() override;
+	void onRefreshAudioBuffers() override;
 
 	json toJsonInternal() const override { return nullptr; }
 	void fromJsonInternal(const json& j) override {}

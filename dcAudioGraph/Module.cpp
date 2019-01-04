@@ -11,11 +11,14 @@
 #include "Module.h"
 #include "Graph.h"
 
+// TODO: this might want to be dynamic
+const size_t MAX_CONTROL_BUFFER_SIZE = 1024;
+
 using json = nlohmann::json;
 
 void dc::Module::setBufferSize(size_t bufferSize)
 {
-	refreshBuffers(bufferSize);
+	refreshAudioBuffers(bufferSize);
 }
 
 void dc::Module::process(size_t rev)
@@ -27,38 +30,49 @@ void dc::Module::process(size_t rev)
 	}
 	_rev = rev;
 
-	// we assume _processBuffer has enough channels for all the inputs,
-	// but let's check anyway
-	if (_buffer.getNumChannels() < _audioInputs.size())
+	// pull in control data
+	// Note: we assume there are enough control buffers for the inputs
+	// TODO: safety checks for debug builds
 	{
-		return;
+		for (size_t i = 0; i < _controlInputs.size(); ++i)
+		{
+			_controlBuffers[i].clear();
+
+			// merge data if there are multiple connections
+			for (auto& connectedOutput : _controlInputs[i]->outputs)
+			{
+				if (auto oPtr = connectedOutput.lock())
+				{
+					if (auto* buffer = oPtr->parent.getControlOutputBuffer(oPtr->index))
+					{
+						_controlBuffers[i].merge(*buffer);
+					}
+				}
+			}
+		}
 	}
 
-	// pull audio from inputs to process buffer
-	for (size_t cIdx = 0; cIdx < _buffer.getNumChannels(); ++cIdx)
+	// pull in audio data
+	// Note: we assume there are enough channels in the temp buffer for the inputs
+	// TODO: safety checks for debug builds
 	{
-		// clear input buffer
-		_buffer.zero(cIdx);
+		// clear the whole buffer
+		_audioBuffer.zero();
 
-		// if we have an input for this channel, pull it into the process buffer
-		if (cIdx < _audioInputs.size())
+		// pull audio from inputs to process buffer
+		for (size_t cIdx = 0; cIdx < _audioInputs.size(); ++cIdx)
 		{
 			auto* aIn = _audioInputs[cIdx].get();
-			size_t oIdx = 0;
-			while (oIdx < aIn->outputs.size())
+
+			// merge data from all connections
+			for (auto& aOut : aIn->outputs)
 			{
-				if (auto aOut = aIn->outputs[oIdx].lock())
+				if (auto outPtr = aOut.lock())
 				{
 					// process upstream modules
-					aOut->parent.process(rev);
-					// sum the audio from each input's connections
-					_buffer.addFrom(aOut->parent.getOutputBuffer(), aOut->index, cIdx);
-					++oIdx;
-				}
-				// if output doesn't exist anymore, remove it
-				else
-				{
-					aIn->outputs.erase(aIn->outputs.begin() + oIdx);
+					outPtr->parent.process(rev);
+					// sum the audio
+					_audioBuffer.addFrom(outPtr->parent.getAudioOutputBuffer(), outPtr->index, cIdx);
 				}
 			}
 		}
@@ -68,9 +82,18 @@ void dc::Module::process(size_t rev)
 	onProcess();
 }
 
-dc::AudioBuffer& dc::Module::getOutputBuffer()
+dc::AudioBuffer& dc::Module::getAudioOutputBuffer()
 {
-	return _buffer;
+	return _audioBuffer;
+}
+
+dc::ControlBuffer* dc::Module::getControlOutputBuffer(size_t outputIndex)
+{
+	if (outputIndex < _controlBuffers.size())
+	{
+		return &_controlBuffers[outputIndex];
+	}
+	return nullptr;
 }
 
 void dc::Module::setNumAudioInputs(size_t numInputs)
@@ -83,7 +106,7 @@ void dc::Module::setNumAudioInputs(size_t numInputs)
 	{
 		_audioInputs.push_back(std::make_unique<AudioInput>(*this));
 	}
-	refreshBuffers(_buffer.getNumSamples());
+	refreshAudioBuffers(_audioBuffer.getNumSamples());
 }
 
 void dc::Module::setNumAudioOutputs(size_t numOutputs)
@@ -94,9 +117,9 @@ void dc::Module::setNumAudioOutputs(size_t numOutputs)
 	}
 	while (numOutputs > _audioOutputs.size())
 	{
-		_audioOutputs.push_back(std::make_unique<AudioOutput>(*this, _audioOutputs.size()));
+		_audioOutputs.push_back(std::make_shared<AudioOutput>(*this, _audioOutputs.size()));
 	}
-	refreshBuffers(_buffer.getNumSamples());
+	refreshAudioBuffers(_audioBuffer.getNumSamples());
 }
 
 bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx)
@@ -112,6 +135,55 @@ bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t t
 		}
 	}
 	return false;
+}
+
+void dc::Module::setNumControlInputs(size_t numInputs)
+{
+	while (numInputs < _controlInputs.size())
+	{
+		_controlInputs.pop_back();
+	}
+	while (numInputs > _controlInputs.size())
+	{
+		_controlInputs.push_back(std::make_unique<ControlInput>(*this));
+	}
+	refreshControlBuffers();
+}
+
+void dc::Module::setNumControlOutputs(size_t numOutputs)
+{
+	while (numOutputs < _controlOutputs.size())
+	{
+		_controlOutputs.pop_back();
+	}
+	while (numOutputs > _controlOutputs.size())
+	{
+		_controlOutputs.push_back(std::make_shared<ControlOutput>(*this, _controlOutputs.size(), MAX_CONTROL_BUFFER_SIZE));
+	}
+	refreshControlBuffers();
+}
+
+bool dc::Module::connectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx)
+{
+	if (nullptr != from && nullptr != to)
+	{
+		if (fromIdx < from->getNumControlOutputs() && toIdx < to->getNumControlInputs())
+		{
+			to->_controlInputs[toIdx]->outputs.emplace_back(from->_controlOutputs[fromIdx]);
+			// TODO: check for dupes
+			// TODO: check for loops
+			return true;
+		}
+	}
+	return false;
+}
+
+void dc::Module::pushControlMessage(ControlMessage message, size_t outputIndex)
+{
+	if (outputIndex < _controlBuffers.size())
+	{
+		_controlBuffers[outputIndex].insert(message);
+	}
 }
 
 // serialization keys
@@ -205,10 +277,24 @@ void dc::Module::updateConnectionsFromJson(const json& j, Graph& parentGraph)
 	}
 }
 
-void dc::Module::refreshBuffers(size_t numSamples)
+void dc::Module::refreshAudioBuffers(size_t numSamples)
 {
-	_buffer.resize(numSamples, std::max(_audioInputs.size(), _audioOutputs.size()));
-	onRefreshBuffers();
+	_audioBuffer.resize(numSamples, std::max(_audioInputs.size(), _audioOutputs.size()));
+	onRefreshAudioBuffers();
+}
+
+void dc::Module::refreshControlBuffers()
+{
+	const size_t numBuffers = std::max(_controlInputs.size(), _controlOutputs.size());
+	while(numBuffers < _controlBuffers.size())
+	{
+		_controlBuffers.pop_back();
+	}
+	while (numBuffers < _controlBuffers.size())
+	{
+		_controlBuffers.emplace_back(MAX_CONTROL_BUFFER_SIZE);
+	}
+	onRefreshControlBuffers();
 }
 
 std::map<std::string, dc::ModuleFactory::ModuleCreateMethod> dc::ModuleFactory::_moduleCreateMethods;

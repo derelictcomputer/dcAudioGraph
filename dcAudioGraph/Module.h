@@ -11,6 +11,7 @@
 #pragma once
 #include <vector>
 #include "AudioBuffer.h"
+#include "ControlBuffer.h"
 #include "json.hpp"
 
 namespace dc
@@ -27,8 +28,10 @@ public:
 	void setBufferSize(size_t bufferSize);
 	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
 	void process(size_t rev);
-	AudioBuffer& getOutputBuffer();
+	AudioBuffer& getAudioOutputBuffer();
+	ControlBuffer* getControlOutputBuffer(size_t outputIndex);
 
+	// Audio connection
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
 	void setNumAudioInputs(size_t numInputs);
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
@@ -36,48 +39,79 @@ public:
 
 	static bool connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
 
+	// Control connection
+	size_t getNumControlInputs() const { return _controlInputs.size(); }
+	void setNumControlInputs(size_t numInputs);
+	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
+	void setNumControlOutputs(size_t numOutputs);
+
+	static bool connectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx);
+
+	// serialization
 	json toJson() const;
 	static std::unique_ptr<Module> createFromJson(const json& j);
 	void fromJson(const json& j);
 	static void updateConnectionsFromJson(const json& j, Graph& parentGraph);
 
+	// the id of this Module instance in its parent graph
 	size_t id = 0;
 
 protected:
 	virtual void onProcess() {}
-	virtual void onRefreshBuffers() {}
+	virtual void onRefreshAudioBuffers() {}
+	virtual void onRefreshControlBuffers() {}
+
+	void pushControlMessage(ControlMessage message, size_t outputIndex);
 
 	virtual nlohmann::json toJsonInternal() const = 0;
 	virtual void fromJsonInternal(const nlohmann::json& j) = 0;
 
 	virtual std::string getModuleIdForInstance() const = 0;
 
-	AudioBuffer _buffer;
 	double _sampleRate = 0;
+	AudioBuffer _audioBuffer;
+	std::vector<ControlBuffer> _controlBuffers;
 
 private:
-	struct AudioOutput
+	struct AudioOutput final
 	{
-		explicit AudioOutput(Module& parent, size_t index) : parent(parent), index(index) {}
-		~AudioOutput() = default;
+		AudioOutput(Module& parent, size_t index) : parent(parent), index(index) {}
 
 		Module& parent;
 		size_t index;
 	};
 
-	struct AudioInput
+	struct AudioInput final
 	{
 		explicit AudioInput(Module& parent) : parent(parent) {}
-		~AudioInput() = default;
 
 		Module& parent;
 		std::vector<std::weak_ptr<AudioOutput>> outputs;
 	};
 
-	void refreshBuffers(size_t numSamples);
+	struct ControlOutput final
+	{
+		ControlOutput(Module& parent, size_t index, size_t maxBufferSize) : parent(parent), index(index) {}
 
-	std::vector<std::shared_ptr<AudioInput>> _audioInputs;
+		Module& parent;
+		size_t index;
+	};
+
+	struct ControlInput final
+	{
+		explicit ControlInput(Module& parent) : parent(parent) {}
+
+		Module& parent;
+		std::vector<std::weak_ptr<ControlOutput>> outputs;
+	};
+
+	void refreshAudioBuffers(size_t numSamples);
+	void refreshControlBuffers();
+
+	std::vector<std::unique_ptr<AudioInput>> _audioInputs;
 	std::vector<std::shared_ptr<AudioOutput>> _audioOutputs;
+	std::vector<std::unique_ptr<ControlInput>> _controlInputs;
+	std::vector<std::shared_ptr<ControlOutput>> _controlOutputs;
 	size_t _rev = 0;
 };
 
