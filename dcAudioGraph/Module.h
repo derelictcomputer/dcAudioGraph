@@ -39,7 +39,7 @@ public:
 	json toJson() const;
 	static std::unique_ptr<Module> createFromJson(const json& j);
 	void fromJson(const json& j);
-	void updateConnectionsFromJson(const json& j, Graph& parentGraph);
+	static void updateConnectionsFromJson(const json& j, Graph& parentGraph);
 
 	size_t id = 0;
 

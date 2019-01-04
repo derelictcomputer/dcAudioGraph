@@ -89,11 +89,11 @@ void dc::Graph::setNumAudioOutputs(size_t numOutputs)
 	_audioOutputModule.setNumAudioOutputs(numOutputs);
 }
 
-size_t dc::Graph::addModule(std::unique_ptr<Module> module)
+size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t index)
 {
 	if (nullptr != module)
 	{
-		const size_t id = _nextId++;
+		const size_t id = index > 0 ? index : _nextId++;
 		module->id = id;
 		module->setBufferSize(_bufferSize);
 		module->setSampleRate(_sampleRate);
@@ -162,18 +162,24 @@ void dc::Graph::clear()
 	// TODO: decide whether we should mess with the graph I/O
 }
 
+// serialization keys
+const std::string S_AUDIO_INPUT_MODULE = "audioInputModule";
+const std::string S_AUDIO_OUTPUT_MODULE = "audioOutputModule";
+const std::string S_MODULES = "modules";
+
 json dc::Graph::toJson() const
 {
 	json j;
 
-	j["nextId"] = _nextId;
-	j["audioInputModule"] = _audioInputModule.toJson();
-	j["audioOutputModule"] = _audioOutputModule.toJson();
-	j["modules"] = json::array();
+	j[S_AUDIO_INPUT_MODULE] = _audioInputModule.toJson();
+	j[S_AUDIO_OUTPUT_MODULE] = _audioOutputModule.toJson();
+	
+	auto m = json::array();
 	for (auto& module : _modules)
 	{
-		j["modules"].push_back(module->toJson());
+		m.push_back(module->toJson());
 	}
+	j[S_MODULES] = m;
 
 	return j;
 }
@@ -182,31 +188,38 @@ void dc::Graph::fromJson(const json& j)
 {
 	clear();
 
-	_audioInputModule.fromJson(j["audioInputModule"]);
-	_audioOutputModule.fromJson(j["audioOutputModule"]);
+	_audioInputModule.fromJson(j[S_AUDIO_INPUT_MODULE]);
+	_audioOutputModule.fromJson(j[S_AUDIO_OUTPUT_MODULE]);
 
 	// first, create all the modules
-	auto modules = j["modules"];
+	auto modules = j[S_MODULES];
 	for (auto& module : modules)
 	{
 		auto instance = Module::createFromJson(module);
 		if (nullptr != instance)
 		{
-			addModule(std::move(instance));
+			addModule(std::move(instance), instance->id);
 		}
 	}
 	// now, connect them
-	for (auto module : j["modules"])
+	for (auto& module : modules)
 	{
-		const size_t graphId = module["_graphId"].get<size_t>();
-		if (auto* instance = getModuleById(graphId))
-		{
-			instance->updateConnectionsFromJson(module, *this);
-		}
+		Module::updateConnectionsFromJson(module, *this);
 	}
 	// also connect the input and output modules
-	_audioInputModule.updateConnectionsFromJson(j["audioInputModule"], *this);
-	_audioOutputModule.updateConnectionsFromJson(j["audioOutputModule"], *this);
+	Module::updateConnectionsFromJson(j[S_AUDIO_INPUT_MODULE], *this);
+	Module::updateConnectionsFromJson(j[S_AUDIO_OUTPUT_MODULE], *this);
 
-	_nextId = j["nextId"].get<size_t>();
+	compressIds();
+}
+
+void dc::Graph::compressIds()
+{
+	_nextId = 1;
+	_audioInputModule.id = _nextId++;
+	_audioOutputModule.id = _nextId++;
+	for (auto& m : _modules)
+	{
+		m->id = _nextId++;
+	}
 }

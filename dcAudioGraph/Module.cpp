@@ -114,15 +114,26 @@ bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t t
 	return false;
 }
 
+// serialization keys
+const std::string S_MODULE_ID = "_moduleId";
+const std::string S_GRAPH_ID = "_graphId";
+const std::string S_NUM_AUDIO_INPUTS = "numAudioInputs";
+const std::string S_NUM_AUDIO_OUTPUTS = "numAudioOutputs";
+const std::string S_AUDIO_INPUT_CONNECTIONS = "audioInputConnections";
+const std::string S_AIC_INPUT_INDEX = "inputIndex";
+const std::string S_AIC_OUTPUT_INDEX = "outputIndex";
+const std::string S_AIC_OUTPUT_GRAPH_ID = "outputGraphId";
+const std::string S_SETTINGS = "settings";
+
 json dc::Module::toJson() const
 {
 	json j;
-	j["_moduleId"] = getModuleIdForInstance();
-	j["_graphId"] = id;
+	j[S_MODULE_ID] = getModuleIdForInstance();
+	j[S_GRAPH_ID] = id;
 	
 	// audio I/O
-	j["numAudioInputs"] = getNumAudioInputs();
-	j["numAudioOutputs"] = getNumAudioOutputs();
+	j[S_NUM_AUDIO_INPUTS] = getNumAudioInputs();
+	j[S_NUM_AUDIO_OUTPUTS] = getNumAudioOutputs();
 
 	// audio input connections
 	auto ic = json::array();
@@ -133,24 +144,24 @@ json dc::Module::toJson() const
 			if (auto oP = output.lock())
 			{
 				ic.push_back({ 
-					{"inputIndex", i}, 
-					{"outputGraphId", oP->parent.id}, 
-					{"outputIndex", oP->index} 
+					{S_AIC_INPUT_INDEX, i}, 
+					{S_AIC_OUTPUT_GRAPH_ID, oP->parent.id}, 
+					{S_AIC_OUTPUT_INDEX, oP->index} 
 				});
 			}
 		}
 	}
-	j["audioInputConnections"] = ic;
+	j[S_AUDIO_INPUT_CONNECTIONS] = ic;
 
 	// settings for concrete modules
-	j["settings"] = toJsonInternal();
+	j[S_SETTINGS] = toJsonInternal();
 
 	return j;
 }
 
 std::unique_ptr<dc::Module> dc::Module::createFromJson(const json& j)
 {
-	std::string moduleId = j["_moduleId"].get<std::string>();
+	const std::string moduleId = j[S_MODULE_ID].get<std::string>();
 	auto instance = ModuleFactory::create(moduleId);
 	if (nullptr != instance)
 	{
@@ -162,29 +173,34 @@ std::unique_ptr<dc::Module> dc::Module::createFromJson(const json& j)
 void dc::Module::fromJson(const json& j)
 {
 	// do the common module stuff first, in case the specific config depends on that
-	id = j["_graphId"].get<size_t>();
+	id = j[S_GRAPH_ID].get<size_t>();
 	
 	// audio inputs
-	setNumAudioInputs(j["numAudioInputs"].get<size_t>());
-	setNumAudioOutputs(j["numAudioOutputs"].get<size_t>());
+	setNumAudioInputs(j[S_NUM_AUDIO_INPUTS].get<size_t>());
+	setNumAudioOutputs(j[S_NUM_AUDIO_OUTPUTS].get<size_t>());
 
 	// NOTE: we will make the connections after all nodes have been configured for the parent graph
 
-	fromJsonInternal(j["settings"]);
+	fromJsonInternal(j[S_SETTINGS]);
 }
 
 void dc::Module::updateConnectionsFromJson(const json& j, Graph& parentGraph)
 {
-	auto connections = j["audioInputConnections"];
+	const size_t sourceId = j[S_GRAPH_ID].get<size_t>();
 
-	for (auto c : connections)
+	if (auto* source = parentGraph.getModuleById(sourceId))
 	{
-		const size_t inputIdx = c["inputIndex"].get<size_t>();
-		const size_t outputModuleId = c["outputGraphId"].get<size_t>();
-		const size_t outputIdx = c["outputIndex"].get<size_t>();
-		if (auto* other = parentGraph.getModuleById(outputModuleId))
+		auto connections = j[S_AUDIO_INPUT_CONNECTIONS];
+
+		for (auto c : connections)
 		{
-			connectAudio(other, outputIdx, this, inputIdx);
+			const size_t inputIdx = c[S_AIC_INPUT_INDEX].get<size_t>();
+			const size_t outputModuleId = c[S_AIC_OUTPUT_GRAPH_ID].get<size_t>();
+			const size_t outputIdx = c[S_AIC_OUTPUT_INDEX].get<size_t>();
+			if (auto* other = parentGraph.getModuleById(outputModuleId))
+			{
+				connectAudio(other, outputIdx, source, inputIdx);
+			}
 		}
 	}
 }

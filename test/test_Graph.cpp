@@ -112,9 +112,69 @@ TEST(Graph, TestSerialization)
 
 	auto patch = json::diff(j1, j2);
 
-	std::cerr << j1.dump(2) << std::endl;
-	std::cerr << j2.dump(2) << std::endl;
-	std::cerr << patch.dump(2) << std::endl;
+	ASSERT_EQ(patch.size(), 0);
+}
+
+TEST(Graph, TestSerializationWithRemove)
+{
+	registerBuiltInModules();
+
+	const size_t numIo = 5;
+	const size_t bufferSize = 1024;
+	const float testValue = 0.5f;
+
+	Graph g;
+	g.setNumAudioInputs(numIo);
+	g.setNumAudioOutputs(numIo);
+
+	auto* aIn = g.getAudioInput();
+	auto* aOut = g.getAudioOutput();
+
+	size_t gmId = g.addModule(std::make_unique<GraphModule>());
+	auto* gm = dynamic_cast<GraphModule*>(g.getModuleById(gmId));
+	ASSERT_NE(gm, nullptr);
+	gm->setNumAudioInputs(numIo);
+	gm->setNumAudioOutputs(numIo);
+
+	auto* gAIn = gm->getGraph().getAudioInput();
+	auto* gAOut = gm->getGraph().getAudioOutput();
+
+	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
+	{
+		EXPECT_TRUE(dc::Module::connectAudio(gAIn, cIdx, gAOut, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(aIn, cIdx, gm, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(gm, cIdx, aOut, cIdx));
+	}
+
+	using json = nlohmann::json;
+	auto j1 = g.toJson();
+
+	g.removeModuleById(gmId);
+
+	{
+		AudioBuffer inBuffer(bufferSize, numIo);
+		inBuffer.fill(testValue);
+		AudioBuffer outBuffer(bufferSize, numIo);
+		g.init(bufferSize, 44100);
+		g.process(inBuffer, outBuffer);
+	}
+
+	gmId = g.addModule(std::make_unique<GraphModule>(), gmId);
+	gm = dynamic_cast<GraphModule*>(g.getModuleById(gmId));
+	ASSERT_NE(gm, nullptr);
+	gm->setNumAudioInputs(numIo);
+	gm->setNumAudioOutputs(numIo);
+
+	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
+	{
+		EXPECT_TRUE(dc::Module::connectAudio(gAIn, cIdx, gAOut, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(aIn, cIdx, gm, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(gm, cIdx, aOut, cIdx));
+	}
+
+	auto j2 = g.toJson();
+
+	auto patch = json::diff(j1, j2);
 
 	ASSERT_EQ(patch.size(), 0);
 }

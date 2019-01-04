@@ -66,7 +66,7 @@ public:
 	void setNumAudioOutputs(size_t numOutputs);
 	Module* getAudioOutput() { return &_audioOutputModule; }
 
-	size_t addModule(std::unique_ptr<Module> module);
+	size_t addModule(std::unique_ptr<Module> module, size_t index = 0);
 	size_t getNumModules() const { return _modules.size(); }
 	Module* getModuleAt(size_t index);
 	Module* getModuleById(size_t id);
@@ -79,13 +79,15 @@ public:
 	void fromJson(const json& j);
 
 private:
+	void compressIds();
+
 	// serializable
-	size_t _nextId = 1;
 	GraphAudioInputModule _audioInputModule;
 	GraphAudioOutputModule _audioOutputModule;
 	std::vector<std::unique_ptr<Module>> _modules;
 	
 	// internals
+	size_t _nextId = 1;
 	size_t _rev = 0;
 	size_t _bufferSize = 0;
 	double _sampleRate = 0;
