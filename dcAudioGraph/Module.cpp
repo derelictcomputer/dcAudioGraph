@@ -195,6 +195,12 @@ const std::string S_AUDIO_INPUT_CONNECTIONS = "audioInputConnections";
 const std::string S_AIC_INPUT_INDEX = "inputIndex";
 const std::string S_AIC_OUTPUT_INDEX = "outputIndex";
 const std::string S_AIC_OUTPUT_GRAPH_ID = "outputGraphId";
+const std::string S_NUM_CONTROL_INPUTS = "numControlInputs";
+const std::string S_NUM_CONTROL_OUTPUTS = "numControlOutputs";
+const std::string S_CONTROL_INPUT_CONNECTIONS = "controlInputConnections";
+const std::string S_CIC_INPUT_INDEX = "inputIndex";
+const std::string S_CIC_OUTPUT_INDEX = "outputIndex";
+const std::string S_CIC_OUTPUT_GRAPH_ID = "outputGraphId";
 const std::string S_SETTINGS = "settings";
 
 json dc::Module::toJson() const
@@ -204,26 +210,52 @@ json dc::Module::toJson() const
 	j[S_GRAPH_ID] = id;
 	
 	// audio I/O
-	j[S_NUM_AUDIO_INPUTS] = getNumAudioInputs();
-	j[S_NUM_AUDIO_OUTPUTS] = getNumAudioOutputs();
-
-	// audio input connections
-	auto ic = json::array();
-	for (size_t i = 0; i < getNumAudioInputs(); ++i)
 	{
-		for (auto& output : _audioInputs[i]->outputs)
+		j[S_NUM_AUDIO_INPUTS] = getNumAudioInputs();
+		j[S_NUM_AUDIO_OUTPUTS] = getNumAudioOutputs();
+
+		// audio input connections
+		auto ic = json::array();
+		for (size_t i = 0; i < getNumAudioInputs(); ++i)
 		{
-			if (auto oP = output.lock())
+			for (auto& output : _audioInputs[i]->outputs)
 			{
-				ic.push_back({ 
-					{S_AIC_INPUT_INDEX, i}, 
-					{S_AIC_OUTPUT_GRAPH_ID, oP->parent.id}, 
-					{S_AIC_OUTPUT_INDEX, oP->index} 
-				});
+				if (auto oP = output.lock())
+				{
+					ic.push_back({
+						{S_AIC_INPUT_INDEX, i},
+						{S_AIC_OUTPUT_GRAPH_ID, oP->parent.id},
+						{S_AIC_OUTPUT_INDEX, oP->index}
+						});
+				}
 			}
 		}
+		j[S_AUDIO_INPUT_CONNECTIONS] = ic;
 	}
-	j[S_AUDIO_INPUT_CONNECTIONS] = ic;
+
+	// control I/O
+	{
+		j[S_NUM_CONTROL_INPUTS] = getNumControlInputs();
+		j[S_NUM_CONTROL_OUTPUTS] = getNumControlOutputs();
+
+		// control input connections
+		auto ic = json::array();
+		for (size_t i = 0; i < getNumControlInputs(); ++i)
+		{
+			for (auto& output : _audioInputs[i]->outputs)
+			{
+				if (auto oP = output.lock())
+				{
+					ic.push_back({
+						{S_CIC_INPUT_INDEX, i},
+						{S_CIC_OUTPUT_GRAPH_ID, oP->parent.id},
+						{S_CIC_OUTPUT_INDEX, oP->index}
+					});
+				}
+			}
+		}
+		j[S_CONTROL_INPUT_CONNECTIONS] = ic;
+	}
 
 	// settings for concrete modules
 	j[S_SETTINGS] = toJsonInternal();
@@ -247,9 +279,13 @@ void dc::Module::fromJson(const json& j)
 	// do the common module stuff first, in case the specific config depends on that
 	id = j[S_GRAPH_ID].get<size_t>();
 	
-	// audio inputs
+	// audio I/O
 	setNumAudioInputs(j[S_NUM_AUDIO_INPUTS].get<size_t>());
 	setNumAudioOutputs(j[S_NUM_AUDIO_OUTPUTS].get<size_t>());
+
+	// control I/O
+	setNumControlInputs(j[S_NUM_CONTROL_INPUTS].get<size_t>());
+	setNumControlOutputs(j[S_NUM_CONTROL_OUTPUTS].get<size_t>());
 
 	// NOTE: we will make the connections after all nodes have been configured for the parent graph
 
@@ -262,16 +298,34 @@ void dc::Module::updateConnectionsFromJson(const json& j, Graph& parentGraph)
 
 	if (auto* source = parentGraph.getModuleById(sourceId))
 	{
-		auto connections = j[S_AUDIO_INPUT_CONNECTIONS];
-
-		for (auto c : connections)
+		// audio connections
 		{
-			const size_t inputIdx = c[S_AIC_INPUT_INDEX].get<size_t>();
-			const size_t outputModuleId = c[S_AIC_OUTPUT_GRAPH_ID].get<size_t>();
-			const size_t outputIdx = c[S_AIC_OUTPUT_INDEX].get<size_t>();
-			if (auto* other = parentGraph.getModuleById(outputModuleId))
+			auto connections = j[S_AUDIO_INPUT_CONNECTIONS];
+
+			for (auto c : connections)
 			{
-				connectAudio(other, outputIdx, source, inputIdx);
+				const size_t inputIdx = c[S_AIC_INPUT_INDEX].get<size_t>();
+				const size_t outputModuleId = c[S_AIC_OUTPUT_GRAPH_ID].get<size_t>();
+				const size_t outputIdx = c[S_AIC_OUTPUT_INDEX].get<size_t>();
+				if (auto* other = parentGraph.getModuleById(outputModuleId))
+				{
+					connectAudio(other, outputIdx, source, inputIdx);
+				}
+			}
+		}
+		// control connections
+		{
+			auto connections = j[S_CONTROL_INPUT_CONNECTIONS];
+
+			for (auto c : connections)
+			{
+				const size_t inputIdx = c[S_CIC_INPUT_INDEX].get<size_t>();
+				const size_t outputModuleId = c[S_CIC_OUTPUT_GRAPH_ID].get<size_t>();
+				const size_t outputIdx = c[S_CIC_OUTPUT_INDEX].get<size_t>();
+				if (auto* other = parentGraph.getModuleById(outputModuleId))
+				{
+					connectControl(other, outputIdx, source, inputIdx);
+				}
 			}
 		}
 	}
