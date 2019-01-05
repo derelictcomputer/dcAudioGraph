@@ -12,19 +12,12 @@
 
 using json = nlohmann::json;
 
-void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, std::vector<ControlBuffer>& controlBuffers)
+void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer)
 {
 	_inputAudioBuffer.zero();
 	_inputAudioBuffer.copyFrom(inputBuffer, false);
-
-	for (size_t i = 0; i < controlBuffers.size(); ++i)
-	{
-		if (i < _inputControlBuffers.size())
-		{
-			_inputControlBuffers[i].clear();
-			_inputControlBuffers[i].merge(controlBuffers[i]);
-		}
-	}
+	_inputControlBuffer.clear();
+	_inputControlBuffer.merge(controlBuffer);
 }
 
 void dc::GraphInputModule::onProcess()
@@ -42,14 +35,7 @@ void dc::GraphInputModule::onRefreshAudioBuffers()
 
 void dc::GraphInputModule::onRefreshControlBuffers()
 {
-	while (_controlBuffers.size() < _inputControlBuffers.size())
-	{
-		_inputControlBuffers.pop_back();
-	}
-	while (_controlBuffers.size() > _inputControlBuffers.size())
-	{
-		_inputControlBuffers.emplace_back(_controlBuffers[0].maxSize());
-	}
+	_inputControlBuffer.setNumChannels(_controlBuffer.getNumChannels());
 }
 
 dc::Graph::Graph()
@@ -76,28 +62,19 @@ void dc::Graph::init(size_t bufferSize, double sampleRate)
 	}
 }
 
-void dc::Graph::process(const AudioBuffer& audioInBuffer, AudioBuffer& audioOutBuffer,
-	std::vector<ControlBuffer>& controlInBuffers, std::vector<ControlBuffer>& controlOutBuffers)
+void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
-	// copy the input buffers to the input module
-	_inputModule.setInputData(audioInBuffer, controlInBuffers);
+	// copy the input buffers to the graph input
+	_inputModule.setInputData(audioBuffer, controlBuffer);
 
 	// process the graph
 	_outputModule.process(++_rev);
 
-	// copy the graph output to the output buffer
-	audioOutBuffer.zero();
-	audioOutBuffer.copyFrom(_outputModule.getAudioOutputBuffer(), false);
-
-	for (size_t i = 0; i < controlOutBuffers.size(); ++i)
-	{
-		controlOutBuffers[i].clear();
-
-		if (auto* b = _outputModule.getControlOutputBuffer(i))
-		{
-			controlOutBuffers[i].merge(*b);
-		}
-	}
+	// copy the output
+	audioBuffer.zero();
+	audioBuffer.copyFrom(_outputModule.getAudioOutputBuffer(), false);
+	controlBuffer.clear();
+	controlBuffer.merge(_outputModule.getControlOutputBuffer());
 }
 
 void dc::Graph::setNumAudioInputs(size_t numInputs)

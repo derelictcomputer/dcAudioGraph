@@ -29,7 +29,7 @@ public:
 	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
 	void process(size_t rev);
 	AudioBuffer& getAudioOutputBuffer();
-	ControlBuffer* getControlOutputBuffer(size_t outputIndex);
+	ControlBuffer& getControlOutputBuffer();
 
 	// Audio connection
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
@@ -70,7 +70,7 @@ protected:
 
 	double _sampleRate = 0;
 	AudioBuffer _audioBuffer;
-	std::vector<ControlBuffer> _controlBuffers;
+	ControlBuffer _controlBuffer;
 
 private:
 	struct AudioOutput final

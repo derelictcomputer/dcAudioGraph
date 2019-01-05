@@ -36,7 +36,7 @@ public:
 	// convenience method for getting the unique id of the module type
 	static std::string getModuleId() { return "dc.GraphAudioInputModule"; }
 
-	void setInputData(const AudioBuffer& inputBuffer, std::vector<ControlBuffer>& controlBuffers);
+	void setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer);
 
 protected:
 	void onProcess() override;
@@ -49,7 +49,7 @@ protected:
 
 private:
 	AudioBuffer _inputAudioBuffer;
-	std::vector<ControlBuffer> _inputControlBuffers;
+	ControlBuffer _inputControlBuffer;
 };
 
 class Graph
@@ -59,9 +59,7 @@ public:
 	~Graph() = default;
 
 	void init(size_t bufferSize, double sampleRate);
-	void process(
-		const AudioBuffer& audioInBuffer, AudioBuffer& audioOutBuffer, 
-		std::vector<ControlBuffer>& controlInBuffers, std::vector<ControlBuffer>& controlOutBuffers);
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer);
 
 	size_t getNumAudioInputs() const { return _inputModule.getNumAudioOutputs(); }
 	void setNumAudioInputs(size_t numInputs);

@@ -41,15 +41,16 @@ TEST(Graph, GraphIOBasic)
 
 	AudioBuffer inBuffer(numSamples, numIo);
 	inBuffer.fill(testValue);
-	AudioBuffer outBuffer(numSamples, numIo);
+	AudioBuffer outBuffer;
+	outBuffer.copyFrom(inBuffer, true);
+	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
-	std::vector<dc::ControlBuffer> inCBuf;
-	std::vector<dc::ControlBuffer> outCBuf;
+	ControlBuffer controlBuffer;
 
 	Graph g;
 	makeBasicGraph(g, numIo);
 	g.init(numSamples, 44100);
-	g.process(inBuffer, outBuffer, inCBuf, outCBuf);
+	g.process(outBuffer, controlBuffer);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 }
 
@@ -61,10 +62,11 @@ TEST(Graph, GraphIOBasic_Loop)
 
 	AudioBuffer inBuffer(numSamples, numIo);
 	inBuffer.fill(testValue);
-	AudioBuffer outBuffer(numSamples, numIo);
+	AudioBuffer outBuffer;
+	outBuffer.copyFrom(inBuffer, true);
+	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
-	std::vector<dc::ControlBuffer> inCBuf;
-	std::vector<dc::ControlBuffer> outCBuf;
+	ControlBuffer controlBuffer;
 
 	Graph g;
 	makeBasicGraph(g, numIo);
@@ -72,7 +74,7 @@ TEST(Graph, GraphIOBasic_Loop)
 
 	for (int i = 0; i < 1000; ++i)
 	{
-		g.process(inBuffer, outBuffer, inCBuf, outCBuf);
+		g.process(outBuffer, controlBuffer);
 		ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 	}
 }
@@ -160,12 +162,13 @@ TEST(Graph, TestSerializationWithRemove)
 	{
 		AudioBuffer inBuffer(bufferSize, numIo);
 		inBuffer.fill(testValue);
-		AudioBuffer outBuffer(bufferSize, numIo);
-		std::vector<dc::ControlBuffer> inCBuf;
-		std::vector<dc::ControlBuffer> outCBuf;
+		AudioBuffer outBuffer;
+		outBuffer.copyFrom(inBuffer, true);
+		EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
+		ControlBuffer controlBuffer;
 
 		g.init(bufferSize, 44100);
-		g.process(inBuffer, outBuffer, inCBuf, outCBuf);
+		g.process(outBuffer, controlBuffer);
 	}
 
 	gmId = g.addModule(std::make_unique<GraphModule>(), gmId);

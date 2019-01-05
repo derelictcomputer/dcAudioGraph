@@ -1,12 +1,10 @@
 #pragma once
 #include <vector>
-#include <memory>
 
 namespace dc
 {
-struct ControlMessage
+struct ControlMessage final
 {
-public:
 	enum class Type
 	{
 		Trigger,
@@ -41,35 +39,46 @@ public:
 	};
 };
 
-class ControlBuffer
+class ControlBuffer final
 {
 public:
-	class Iterator
+	class Channel final
 	{
 	public:
-		explicit Iterator(ControlBuffer& buffer);
-		bool next(ControlMessage& messageOut);
+		class Iterator final
+		{
+		public:
+			explicit Iterator(Channel& channel);
+			bool next(ControlMessage& messageOut);
 
-		static Iterator invalid;
+		private:
+			Channel& _channel;
+			size_t _next = 0;
+		};
+
+		explicit Channel();
+
+		size_t size() const { return _messages.size(); };
+		Iterator getIterator();
+
+		void insert(ControlMessage& message);
+		void merge(Channel& other);
+		void clear();
 
 	private:
-		Iterator();
-		static ControlBuffer _invalidBuffer;
-
-		ControlBuffer& _buffer;
-		size_t _next = 0;
+		std::vector<ControlMessage> _messages;
 	};
 
-	explicit ControlBuffer(size_t maxSize);
+	size_t getNumChannels() const { return _channels.size(); }
+	void setNumChannels(size_t numChannels);
 
-	size_t size() const { return _messages.size(); };
-	size_t maxSize() const { return _maxSize; }
-	void insert(ControlMessage message);
-	void merge(ControlBuffer& other);
+	void insert(ControlMessage& message, size_t channelIndex);
+	void merge(ControlBuffer& from);
+	void merge(ControlBuffer& from, size_t fromIndex, size_t toIndex);
 	void clear();
+	void clear(size_t channelIndex);
 
 private:
-	std::vector<ControlMessage> _messages;
-	size_t _maxSize;
+	std::vector<Channel> _channels;
 };
 }

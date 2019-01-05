@@ -10,9 +10,8 @@
 #include "../portaudio/include/portaudio.h"
 #include "../../dcAudioGraph/dcAudioGraph.h"
 
-dc::AudioBuffer inBuf, outBuf;
-std::vector<dc::ControlBuffer> inCBuf;
-std::vector<dc::ControlBuffer> outCBuf;
+dc::AudioBuffer audioBuffer;
+dc::ControlBuffer controlBuffer;
 
 int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData)
@@ -21,10 +20,9 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
     float* outSamples = static_cast<float*>(outputBuffer);
 
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
-    inBuf.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), false);
-	outBuf.zero();
-    graph->process(inBuf, outBuf, inCBuf, outCBuf);
-	outBuf.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
+    audioBuffer.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), false);
+    graph->process(audioBuffer, controlBuffer);
+	audioBuffer.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
 	return paContinue;
 }
 
@@ -68,8 +66,7 @@ int main()
     outputParams.suggestedLatency = Pa_GetDeviceInfo(outputParams.device)->defaultLowOutputLatency;
     outputParams.hostApiSpecificStreamInfo = nullptr;
 
-	inBuf.resize(64, 2);
-	outBuf.resize(64, 2);
+	audioBuffer.resize(64, 2);
 
     dc::Graph graph;
     graph.init(64, 48000);

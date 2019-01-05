@@ -1,8 +1,5 @@
 #include "ControlBuffer.h"
 
-dc::ControlBuffer::Iterator dc::ControlBuffer::Iterator::invalid;
-dc::ControlBuffer dc::ControlBuffer::Iterator::_invalidBuffer(0);
-
 dc::ControlMessage::ControlMessage() : type(Type::Trigger), sampleOffset(0)
 {
 	noParams = {};
@@ -27,48 +24,46 @@ dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : type(type),
 	}
 }
 
-dc::ControlBuffer::Iterator::Iterator(ControlBuffer& buffer) : _buffer(buffer)
+dc::ControlBuffer::Channel::Iterator::Iterator(Channel& channel) : _channel(channel)
 {
 }
 
-bool dc::ControlBuffer::Iterator::next(ControlMessage& messageOut)
+bool dc::ControlBuffer::Channel::Iterator::next(ControlMessage& messageOut)
 {
-	if (_buffer._messages.empty() || _next >= _buffer._messages.size())
+	if (_channel._messages.empty() || _next >= _channel._messages.size())
 	{
 		return false;
 	}
-	messageOut = _buffer._messages[_next++];
+	messageOut = _channel._messages[_next++];
 	return true;
 }
 
-dc::ControlBuffer::Iterator::Iterator() : _buffer(_invalidBuffer)
+dc::ControlBuffer::Channel::Channel()
 {
+	_messages.reserve(1024);
 }
 
-dc::ControlBuffer::ControlBuffer(size_t maxSize) : _maxSize(maxSize)
+dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::Channel::getIterator()
 {
-	_messages.reserve(_maxSize);
+	return Iterator(*this);
 }
 
-void dc::ControlBuffer::insert(ControlMessage message)
+void dc::ControlBuffer::Channel::insert(ControlMessage& message)
 {
-	if (_messages.size() < _maxSize)
+	// keep the buffer in order of sample offset
+	for (auto it = _messages.begin(); it != _messages.end(); ++it)
 	{
-		// keep the buffer in order of sample offset
-		for (auto it = _messages.begin(); it != _messages.end(); ++it)
+		if (message.sampleOffset <= it->sampleOffset)
 		{
-			if (message.sampleOffset <= it->sampleOffset)
-			{
-				_messages.insert(it, message);
-				return;
-			}
+			_messages.insert(it, message);
+			return;
 		}
-		// the message list was empty, or this should be the last element
-		_messages.push_back(message);
 	}
+	// the message list was empty, or this should be the last element
+	_messages.push_back(message);
 }
 
-void dc::ControlBuffer::merge(ControlBuffer& other)
+void dc::ControlBuffer::Channel::merge(Channel& other)
 {
 	Iterator otherIt(other);
 	ControlMessage msg;
@@ -78,7 +73,62 @@ void dc::ControlBuffer::merge(ControlBuffer& other)
 	}
 }
 
-void dc::ControlBuffer::clear()
+void dc::ControlBuffer::Channel::clear()
 {
 	_messages.clear();
+}
+
+void dc::ControlBuffer::setNumChannels(size_t numChannels)
+{
+	while (numChannels < _channels.size())
+	{
+		_channels.pop_back();
+	}
+	while (numChannels > _channels.size())
+	{
+		_channels.emplace_back();
+	}
+}
+
+void dc::ControlBuffer::insert(ControlMessage& message, size_t channelIndex)
+{
+	if (channelIndex < _channels.size())
+	{
+		_channels[channelIndex].insert(message);
+	}
+}
+
+void dc::ControlBuffer::merge(ControlBuffer& from)
+{
+	for (size_t i = 0; i < _channels.size(); ++i)
+	{
+		if (i < from.getNumChannels())
+		{
+			_channels[i].merge(from._channels[i]);
+		}
+	}
+}
+
+void dc::ControlBuffer::merge(ControlBuffer& from, size_t fromIndex, size_t toIndex)
+{
+	if (fromIndex < from.getNumChannels() && toIndex < getNumChannels())
+	{
+		_channels[toIndex].merge(from._channels[fromIndex]);
+	}
+}
+
+void dc::ControlBuffer::clear()
+{
+	for (auto& channel : _channels)
+	{
+		channel.clear();
+	}
+}
+
+void dc::ControlBuffer::clear(size_t channelIndex)
+{
+	if (channelIndex < _channels.size())
+	{
+		_channels[channelIndex].clear();
+	}
 }

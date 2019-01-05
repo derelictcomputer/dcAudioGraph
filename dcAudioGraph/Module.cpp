@@ -32,10 +32,10 @@ void dc::Module::process(size_t rev)
 
 	// pull in control data
 	{
-		for (size_t i = 0; i < _controlBuffers.size(); ++i)
-		{
-			_controlBuffers[i].clear();
+		_controlBuffer.clear();
 
+		for (size_t i = 0; i < _controlBuffer.getNumChannels(); ++i)
+		{
 			if (i < _controlInputs.size())
 			{
 				// merge data if there are multiple connections
@@ -43,10 +43,7 @@ void dc::Module::process(size_t rev)
 				{
 					if (auto oPtr = connectedOutput.lock())
 					{
-						if (auto* buffer = oPtr->parent.getControlOutputBuffer(oPtr->index))
-						{
-							_controlBuffers[i].merge(*buffer);
-						}
+						_controlBuffer.merge(oPtr->parent.getControlOutputBuffer(), oPtr->index, i);
 					}
 				}
 			}
@@ -88,13 +85,9 @@ dc::AudioBuffer& dc::Module::getAudioOutputBuffer()
 	return _audioBuffer;
 }
 
-dc::ControlBuffer* dc::Module::getControlOutputBuffer(size_t outputIndex)
+dc::ControlBuffer& dc::Module::getControlOutputBuffer()
 {
-	if (outputIndex < _controlBuffers.size())
-	{
-		return &_controlBuffers[outputIndex];
-	}
-	return nullptr;
+	return _controlBuffer;
 }
 
 void dc::Module::setNumAudioInputs(size_t numInputs)
@@ -181,10 +174,7 @@ bool dc::Module::connectControl(Module* from, size_t fromIdx, Module* to, size_t
 
 void dc::Module::pushControlMessage(ControlMessage message, size_t outputIndex)
 {
-	if (outputIndex < _controlBuffers.size())
-	{
-		_controlBuffers[outputIndex].insert(message);
-	}
+	_controlBuffer.insert(message, outputIndex);
 }
 
 // serialization keys
@@ -340,15 +330,7 @@ void dc::Module::refreshAudioBuffers(size_t numSamples)
 
 void dc::Module::refreshControlBuffers()
 {
-	const size_t numBuffers = std::max(_controlInputs.size(), _controlOutputs.size());
-	while(numBuffers < _controlBuffers.size())
-	{
-		_controlBuffers.pop_back();
-	}
-	while (numBuffers < _controlBuffers.size())
-	{
-		_controlBuffers.emplace_back(MAX_CONTROL_BUFFER_SIZE);
-	}
+	_controlBuffer.setNumChannels(std::max(_controlInputs.size(), _controlOutputs.size()));
 	onRefreshControlBuffers();
 }
 
