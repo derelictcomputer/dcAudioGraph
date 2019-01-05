@@ -25,7 +25,7 @@ public:
 
 protected:
 	json toJsonInternal() const override { return nullptr; }
-	void fromJsonInternal(const json& j) override {}
+	void fromJsonInternal(const json&) override {}
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 };
 
@@ -44,7 +44,7 @@ protected:
 	void onRefreshControlBuffers() override;
 
 	json toJsonInternal() const override { return nullptr; }
-	void fromJsonInternal(const json& j) override {}
+	void fromJsonInternal(const json&) override {}
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:

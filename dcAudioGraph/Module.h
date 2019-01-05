@@ -91,7 +91,7 @@ private:
 
 	struct ControlOutput final
 	{
-		ControlOutput(Module& parent, size_t index, size_t maxBufferSize) : parent(parent), index(index) {}
+		ControlOutput(Module& parent, size_t index) : parent(parent), index(index) {}
 
 		Module& parent;
 		size_t index;

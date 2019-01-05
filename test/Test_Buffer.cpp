@@ -58,8 +58,8 @@ TEST(AudioBuffer, ZeroFunctional)
 
 	ASSERT_TRUE(buffersEqual(b1, b2));
 
-	b1.fill(0.2);
-	b2.fill(0.2);
+	b1.fill(0.2f);
+	b2.fill(0.2f);
 
 	EXPECT_TRUE(buffersEqual(b1, b2));
 
@@ -133,7 +133,7 @@ TEST(AudioBuffer, FromInterleavedFunctional)
 	{
 		for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
 		{
-			interleaved[cIdx + sIdx * numChannels] = cIdx;
+			interleaved[cIdx + sIdx * numChannels] = static_cast<float>(cIdx);
 		}
 	}
 
@@ -147,7 +147,7 @@ TEST(AudioBuffer, FromInterleavedFunctional)
 			auto* cPtr = expected.getChannelPointer(cIdx);
 			for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
 			{
-				cPtr[sIdx] = cIdx;
+				cPtr[sIdx] = static_cast<float>(cIdx);
 			}
 		}
 		b.fromInterleaved(interleaved.data(), numSamples, numChannels, true);
@@ -175,7 +175,7 @@ TEST(AudioBuffer, FromInterleavedFunctional)
 				{
 					break;
 				}
-				cPtr[sIdx] = cIdx;
+				cPtr[sIdx] = static_cast<float>(cIdx);
 			}
 		}
 		b.fromInterleaved(interleaved.data(), numSamples, numChannels, false);
@@ -195,7 +195,7 @@ TEST(AudioBuffer, ToInterleavedFunctional)
 		auto* cPtr = b.getChannelPointer(cIdx);
 		for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
 		{
-			cPtr[sIdx] = cIdx;
+			cPtr[sIdx] = static_cast<float>(cIdx);
 		}
 	}
 
@@ -205,7 +205,7 @@ TEST(AudioBuffer, ToInterleavedFunctional)
 	{
 		for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
 		{
-			expected[cIdx + sIdx * numChannels] = cIdx;
+			expected[cIdx + sIdx * numChannels] = static_cast<float>(cIdx);
 		}
 	}
 

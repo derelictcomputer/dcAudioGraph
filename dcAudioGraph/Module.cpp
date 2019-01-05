@@ -11,9 +11,6 @@
 #include "Module.h"
 #include "Graph.h"
 
-// TODO: this might want to be dynamic
-const size_t MAX_CONTROL_BUFFER_SIZE = 1024;
-
 using json = nlohmann::json;
 
 void dc::Module::setBufferSize(size_t bufferSize)
@@ -152,7 +149,7 @@ void dc::Module::setNumControlOutputs(size_t numOutputs)
 	}
 	while (numOutputs > _controlOutputs.size())
 	{
-		_controlOutputs.push_back(std::make_shared<ControlOutput>(*this, _controlOutputs.size(), MAX_CONTROL_BUFFER_SIZE));
+		_controlOutputs.push_back(std::make_shared<ControlOutput>(*this, _controlOutputs.size()));
 	}
 	refreshControlBuffers();
 }
