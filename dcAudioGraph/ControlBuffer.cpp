@@ -24,6 +24,9 @@ dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : type(type),
 	}
 }
 
+dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::Channel::Iterator::invalid;
+dc::ControlBuffer::Channel dc::ControlBuffer::Channel::Iterator::_invalidChannel;
+
 dc::ControlBuffer::Channel::Iterator::Iterator(Channel& channel) : _channel(channel)
 {
 }
@@ -38,14 +41,13 @@ bool dc::ControlBuffer::Channel::Iterator::next(ControlMessage& messageOut)
 	return true;
 }
 
+dc::ControlBuffer::Channel::Iterator::Iterator() : _channel(_invalidChannel)
+{
+}
+
 dc::ControlBuffer::Channel::Channel()
 {
 	_messages.reserve(1024);
-}
-
-dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::Channel::getIterator()
-{
-	return Iterator(*this);
 }
 
 void dc::ControlBuffer::Channel::insert(ControlMessage& message)
@@ -88,6 +90,15 @@ void dc::ControlBuffer::setNumChannels(size_t numChannels)
 	{
 		_channels.emplace_back();
 	}
+}
+
+dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::getIterator(size_t channelIdx)
+{
+	if (channelIdx < _channels.size())
+	{
+		return _channels[channelIdx].getIterator();
+	}
+	return Channel::Iterator::invalid;
 }
 
 void dc::ControlBuffer::insert(ControlMessage& message, size_t channelIndex)
