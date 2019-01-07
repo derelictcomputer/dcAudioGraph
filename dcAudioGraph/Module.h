@@ -32,6 +32,8 @@ public:
 
 	virtual ~Module() = default;
 
+	virtual std::string getName() = 0;
+
 	// Audio I/O
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
@@ -88,9 +90,6 @@ protected:
 	virtual void onProcess() = 0;
 	virtual void onRefreshAudioBuffers() {}
 	virtual void onRefreshControlBuffers() {}
-
-	// override these if you're doing serialization
-	virtual std::string getModuleIdForInstance() const { return ""; }
 
 	double _sampleRate = 0;
 	AudioBuffer _audioBuffer;

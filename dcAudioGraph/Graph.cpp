@@ -198,14 +198,3 @@ void dc::Graph::clear()
 	_modules.clear();
 	// TODO: decide whether we should mess with the graph I/O
 }
-
-void dc::Graph::compressIds()
-{
-	_nextId = 1;
-	_inputModule._graphId = _nextId++;
-	_outputModule._graphId = _nextId++;
-	for (auto& m : _modules)
-	{
-		m->_graphId = _nextId++;
-	}
-}

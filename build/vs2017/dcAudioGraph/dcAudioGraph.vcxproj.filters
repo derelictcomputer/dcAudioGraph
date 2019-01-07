@@ -16,9 +16,6 @@
     <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\dcAudioGraph\Serialization.cpp">
-      <Filter>dcAudioGraph</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
@@ -40,9 +37,6 @@
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\ControlBuffer.h">
-      <Filter>dcAudioGraph</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\dcAudioGraph\Serialization.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h">

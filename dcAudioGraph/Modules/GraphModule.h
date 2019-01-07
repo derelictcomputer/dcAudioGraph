@@ -18,16 +18,13 @@ namespace dc
 class GraphModule : public Module
 {
 public:
-	// convenience method for getting the unique id of the module type
-	static std::string getModuleId() { return "dc.GraphModule"; }
-
 	Graph& getGraph() { return _graph; }
+
+	std::string getName() override { return "Graph Module"; }
 
 protected:
 	void onProcess() override;
 	void onRefreshAudioBuffers() override;
-
-	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:
 	Graph _graph;

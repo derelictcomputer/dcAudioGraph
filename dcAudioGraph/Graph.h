@@ -19,30 +19,24 @@ namespace dc
 class GraphOutputModule final : public Module
 {
 public:
-	// convenience method for getting the unique id of the module type
-	static std::string getModuleId() { return "dc.GraphAudioOutputModule"; }
+	std::string getName() override { return "Graph Output"; }
 
 protected:
 	void onProcess() override {}
-
-	std::string getModuleIdForInstance() const override { return getModuleId(); }
 };
 
 // a module for input into a graph
 class GraphInputModule final : public Module
 {
 public:
-	// convenience method for getting the unique id of the module type
-	static std::string getModuleId() { return "dc.GraphAudioInputModule"; }
-
 	void setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer);
+
+	std::string getName() override { return "Graph Input"; }
 
 protected:
 	void onProcess() override;
 	void onRefreshAudioBuffers() override;
 	void onRefreshControlBuffers() override;
-
-	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:
 	AudioBuffer _inputAudioBuffer;
@@ -81,8 +75,6 @@ public:
 	void clear();
 
 private:
-	void compressIds();
-
 	// serializable
 	GraphInputModule _inputModule;
 	GraphOutputModule _outputModule;
