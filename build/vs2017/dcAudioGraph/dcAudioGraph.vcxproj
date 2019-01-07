@@ -32,7 +32,6 @@
     <ClInclude Include="..\..\..\dcAudioGraph\ControlBuffer.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\json.hpp" />
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />

@@ -1,10 +1,7 @@
 #pragma once
-
-// TODO: remove this
-#define DC_AUDIO_GRAPH_SERIALIZATION 1
-
-#if DC_AUDIO_GRAPH_SERIALIZATION
-#include "json.hpp"
+#include <map>
+#include <memory>
+#include <functional>
 
 namespace dc
 {
@@ -33,13 +30,5 @@ private:
 void registerBuiltInModules();
 
 // call this to register your own module type
-// NOTE: this isn't necessary unless you're doing serialization of Graph and Module instances
 bool registerModule(const std::string& moduleId, ModuleFactory::ModuleCreateMethod createMethod);
-
-// JSON serialization
-void to_json(nlohmann::json& j, const Graph& g);
-void from_json(const nlohmann::json& j, Graph& g);
-void to_json(nlohmann::json& j, const Module& m);
-void from_json(const nlohmann::json& j, Module& m);
 }
-#endif

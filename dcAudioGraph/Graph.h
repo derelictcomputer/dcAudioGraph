@@ -68,7 +68,7 @@ public:
 	size_t getNumControlOutputs() const { return _outputModule.getNumControlOutputs(); }
 	void setNumControlOutputs(size_t numOutputs);
 	
-	size_t addModule(std::unique_ptr<Module> module, size_t index = 0);
+	size_t addModule(std::unique_ptr<Module> module, size_t id = 0);
 	size_t getNumModules() const { return _modules.size(); }
 
 	Module* getInputModule() { return &_inputModule; }

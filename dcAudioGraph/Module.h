@@ -89,7 +89,7 @@ protected:
 	virtual void onRefreshAudioBuffers() {}
 	virtual void onRefreshControlBuffers() {}
 
-	// override this if you're doing serialization
+	// override these if you're doing serialization
 	virtual std::string getModuleIdForInstance() const { return ""; }
 
 	double _sampleRate = 0;

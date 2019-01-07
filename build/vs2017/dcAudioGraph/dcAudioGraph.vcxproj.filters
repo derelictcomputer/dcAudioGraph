@@ -36,9 +36,6 @@
     <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h">
       <Filter>dcAudioGraph\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\dcAudioGraph\json.hpp">
-      <Filter>dcAudioGraph</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>

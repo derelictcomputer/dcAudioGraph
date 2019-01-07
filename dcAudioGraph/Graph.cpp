@@ -118,11 +118,19 @@ void dc::Graph::setNumControlOutputs(size_t numOutputs)
 	}
 }
 
-size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t index)
+size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t id)
 {
 	if (nullptr != module)
 	{
-		const size_t id = index > 0 ? index : _nextId++;
+		for (auto& m : _modules)
+		{
+			if (m->_graphId == id)
+			{
+				return 0;
+			}
+		}
+
+		id = id > 0 ? id : _nextId++;
 		module->_graphId = id;
 		module->setBufferSize(_bufferSize);
 		module->setSampleRate(_sampleRate);
