@@ -5,21 +5,23 @@ dc::ControlMessage::ControlMessage() : type(Type::Trigger), sampleOffset(0)
 	noParams = {};
 }
 
-dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : type(type), sampleOffset(sampleOffset)
+dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
 {
+	// ensure a valid type is used
 	switch (type)
 	{
-	case Type::Trigger:
-		noParams = {};
-		break;
-	case Type::Note: 
+	case Type::Note:
+		this->type = type;
 		noteParams = { 0, 1.0f };
 		break;
-	case Type::Float: 
+	case Type::Float:
+		this->type = type;
 		floatParams = { 0.0f };
 		break;
+	case Type::Trigger:
 	default:
-		noParams = {};
+		this->type = Type::Trigger;
+		noParams = 0;
 		break;
 	}
 }
@@ -47,6 +49,7 @@ dc::ControlBuffer::Channel::Iterator::Iterator() : _channel(_invalidChannel)
 
 dc::ControlBuffer::Channel::Channel()
 {
+	// TODO: this should be configurable somewhere
 	_messages.reserve(1024);
 }
 

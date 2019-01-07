@@ -5,14 +5,18 @@ namespace dc
 {
 struct ControlMessage final
 {
-	enum class Type
+	// Specifies the type of the message.
+	// Also acts as a bitfield for filtering message types in other things.
+	enum Type : uint16_t
 	{
-		Trigger,
-		Note,
-		Float
+		Trigger = 0x0001,
+		Note	= 0x0002,
+		Float	= 0x0004,
+		None	= 0x0000,
+		All		= 0xffff
 	};
 
-	struct NoParams {};
+	using NoParams = uint8_t;
 
 	struct NoteParams
 	{

@@ -9,100 +9,131 @@
 */
 
 #pragma once
+#include <memory>
 #include <vector>
 #include "AudioBuffer.h"
 #include "ControlBuffer.h"
-#include "json.hpp"
+#include "ModuleParam.h"
 
 namespace dc
 {
-using json = nlohmann::json;
-class Graph;
-
 class Module
 {
 public:
+	friend class Graph;
+
 	Module() = default;
+
+	// for the love of Dog, don't copy/move these
+	Module(const Module& other) = delete;
+	Module& operator=(const Module& other) = delete;
+	Module(Module&& other) = delete;
+	Module& operator=(Module&& other) = delete;
+
 	virtual ~Module() = default;
 
-	void setBufferSize(size_t bufferSize);
-	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
-	void process(size_t rev);
-	AudioBuffer& getAudioOutputBuffer();
-	ControlBuffer& getControlOutputBuffer();
-
-	// Audio connection
+	// Audio I/O
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
-	void setNumAudioInputs(size_t numInputs);
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
-	void setNumAudioOutputs(size_t numOutputs);
 
+	std::string getAudioInputDescription(size_t index) const;
+	std::string getAudioOutputDescription(size_t index) const;
+
+	static bool connectAudio(Module* from, Module* to);
 	static bool connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
+	static void disconnectAudio(Module* from, Module* to);
+	static void disconnectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
+	void disconnectAudio();
+	void removeDeadAudioConnections();
 
-	// Control connection
+	// Control I/O
 	size_t getNumControlInputs() const { return _controlInputs.size(); }
-	void setNumControlInputs(size_t numInputs);
 	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
-	void setNumControlOutputs(size_t numOutputs);
+
+	std::string getControlInputDescription(size_t index) const;
+	std::string getControlOutputDescription(size_t index) const;
 
 	static bool connectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx);
+	static void disconnectControl(Module* from, Module* to);
+	static void disconnectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx);
+	void disconnectControl();
+	void removeDeadControlConnections();
 
-	// serialization
-	json toJson() const;
-	static std::unique_ptr<Module> createFromJson(const json& j);
-	void fromJson(const json& j);
-	static void updateConnectionsFromJson(const json& j, Graph& parentGraph);
-
-	// the id of this Module instance in its parent graph
-	size_t id = 0;
+	// parameters
+	size_t getNumParameters() const { return _params.size(); }
+	ModuleParam* getParam(size_t index);
+	ModuleParam* getParam(std::string id);
 
 protected:
-	virtual void onProcess() {}
-	virtual void onRefreshAudioBuffers() {}
-	virtual void onRefreshControlBuffers() {}
+	void setBufferSize(size_t bufferSize);
+	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
+	void setNumAudioInputs(size_t numInputs);
+	void setNumAudioOutputs(size_t numOutputs);
+
+	void addControlInput(std::string description, ControlMessage::Type typeFlags);
+	void removeControlInput(size_t index);
+	void addControlOutput(std::string description, ControlMessage::Type typeFlags);
+	void removeControlOutput(size_t index);
+	void addParam(const std::string& id, const std::string& displayName, ParamRange& range,
+		bool serializable = false, bool hasControlInput = false);
+
+	void process(size_t rev);
+
+	AudioBuffer& getAudioOutputBuffer() { return _audioBuffer; }
+	ControlBuffer& getControlOutputBuffer() { return _controlBuffer; }
 
 	void pushControlMessage(ControlMessage message, size_t outputIndex);
 
-	virtual nlohmann::json toJsonInternal() const = 0;
-	virtual void fromJsonInternal(const nlohmann::json& j) = 0;
+	// override these in your module to actually do things
+	virtual void onProcess() = 0;
+	virtual void onRefreshAudioBuffers() {}
+	virtual void onRefreshControlBuffers() {}
 
-	virtual std::string getModuleIdForInstance() const = 0;
+	// override this if you're doing serialization
+	virtual std::string getModuleIdForInstance() const { return ""; }
 
 	double _sampleRate = 0;
 	AudioBuffer _audioBuffer;
 	ControlBuffer _controlBuffer;
 
 private:
-	struct AudioOutput final
+	struct ModuleIo
 	{
-		AudioOutput(Module& parent, size_t index) : parent(parent), index(index) {}
+		ModuleIo(Module& parent, size_t index) : parent(parent), index(index) {}
 
+		std::string description = "";
 		Module& parent;
 		size_t index;
 	};
 
-	struct AudioInput final
-	{
-		explicit AudioInput(Module& parent) : parent(parent) {}
+	using AudioOutput = ModuleIo;
 
-		Module& parent;
-		std::vector<std::weak_ptr<AudioOutput>> outputs;
+	struct AudioInput : ModuleIo
+	{
+		AudioInput(Module& parent, size_t index) : ModuleIo(parent, index) {}
+
+		std::vector<std::weak_ptr<AudioOutput>> connections;
 	};
 
-	struct ControlOutput final
+	struct ControlOutput : ModuleIo
 	{
-		ControlOutput(Module& parent, size_t index) : parent(parent), index(index) {}
+		ControlOutput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
+		{
+			this->typeFlags = typeFlags;
+		}
 
-		Module& parent;
-		size_t index;
+		ControlMessage::Type typeFlags;
 	};
 
-	struct ControlInput final
+	struct ControlInput : ModuleIo
 	{
-		explicit ControlInput(Module& parent) : parent(parent) {}
+		ControlInput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
+		{
+			this->typeFlags = typeFlags;
+		}
 
-		Module& parent;
-		std::vector<std::weak_ptr<ControlOutput>> outputs;
+		ControlMessage::Type typeFlags;
+		std::vector<std::weak_ptr<ControlOutput>> connections;
 	};
 
 	void refreshAudioBuffers(size_t numSamples);
@@ -112,24 +143,11 @@ private:
 	std::vector<std::shared_ptr<AudioOutput>> _audioOutputs;
 	std::vector<std::unique_ptr<ControlInput>> _controlInputs;
 	std::vector<std::shared_ptr<ControlOutput>> _controlOutputs;
+	std::vector<std::unique_ptr<ModuleParam>> _params;
+
+	// the id of this Module instance in its parent graph
+	size_t _graphId = 0;
+	// the last graph revision
 	size_t _rev = 0;
-};
-
-/*
- * Use this to create a module when you can't do it explicitly (such as when deserializing)
- * NOTE: If you make a new Module, you'll need to register it with the factory.
- */
-class ModuleFactory
-{
-public:
-	using ModuleCreateMethod = std::function<std::unique_ptr<Module>()>;
-
-	ModuleFactory() = delete;
-
-	static bool registerModule(const std::string& name, ModuleCreateMethod moduleCreateMethod);
-	static std::unique_ptr<Module> create(const std::string& name);
-
-private:
-	static std::map<std::string, ModuleCreateMethod> _moduleCreateMethods;
 };
 }

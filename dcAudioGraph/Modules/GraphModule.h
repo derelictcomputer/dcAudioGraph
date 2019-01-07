@@ -18,9 +18,6 @@ namespace dc
 class GraphModule : public Module
 {
 public:
-	GraphModule() = default;
-	~GraphModule() override = default;
-
 	// convenience method for getting the unique id of the module type
 	static std::string getModuleId() { return "dc.GraphModule"; }
 
@@ -30,8 +27,6 @@ protected:
 	void onProcess() override;
 	void onRefreshAudioBuffers() override;
 
-	json toJsonInternal() const override;
-	void fromJsonInternal(const json& j) override;
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:

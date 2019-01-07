@@ -21,10 +21,11 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\dcAudioGraph\AudioBuffer.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\dcAudioGraph.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp" />
+    <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp" />
+    <ClCompile Include="..\..\..\dcAudioGraph\Serialization.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h" />
@@ -32,8 +33,10 @@
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\json.hpp" />
+    <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\Serialization.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

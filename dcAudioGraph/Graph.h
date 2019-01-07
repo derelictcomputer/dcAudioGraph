@@ -11,7 +11,6 @@
 #pragma once
 #include <vector>
 #include "Module.h"
-#include "json.hpp"
 
 namespace dc
 {
@@ -24,8 +23,8 @@ public:
 	static std::string getModuleId() { return "dc.GraphAudioOutputModule"; }
 
 protected:
-	json toJsonInternal() const override { return nullptr; }
-	void fromJsonInternal(const json&) override {}
+	void onProcess() override {}
+
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 };
 
@@ -43,8 +42,6 @@ protected:
 	void onRefreshAudioBuffers() override;
 	void onRefreshControlBuffers() override;
 
-	json toJsonInternal() const override { return nullptr; }
-	void fromJsonInternal(const json&) override {}
 	std::string getModuleIdForInstance() const override { return getModuleId(); }
 
 private:
@@ -71,20 +68,17 @@ public:
 	size_t getNumControlOutputs() const { return _outputModule.getNumControlOutputs(); }
 	void setNumControlOutputs(size_t numOutputs);
 	
-	Module* getInputModule() { return &_inputModule; }
-	Module* getOutputModule() { return &_outputModule; }
-
 	size_t addModule(std::unique_ptr<Module> module, size_t index = 0);
 	size_t getNumModules() const { return _modules.size(); }
+
+	Module* getInputModule() { return &_inputModule; }
+	Module* getOutputModule() { return &_outputModule; }
 	Module* getModuleAt(size_t index);
 	Module* getModuleById(size_t id);
+
 	void removeModuleAt(size_t index);
 	void removeModuleById(size_t id);
-
 	void clear();
-
-	json toJson() const;
-	void fromJson(const json& j);
 
 private:
 	void compressIds();
