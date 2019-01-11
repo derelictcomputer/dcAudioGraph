@@ -16,6 +16,9 @@
     <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\dcAudioGraph\LevelMeter.cpp">
+      <Filter>dcAudioGraph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h">
@@ -34,6 +37,9 @@
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\LevelMeter.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
   </ItemGroup>

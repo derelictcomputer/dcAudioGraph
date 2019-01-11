@@ -18,7 +18,7 @@ dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
 
 dc::AudioBuffer::~AudioBuffer()
 {
-	delete[] _data;
+	free(_data);
 }
 
 void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
@@ -37,14 +37,15 @@ void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 		return;
 	}
 
+	// free the old data
+	free(_data);
+
+	// set the new size
 	_numSamples = numSamples;
 	_numChannels = numChannels;
 
-	// free the old data
-	delete[] _data;
-
 	// allocate the new data
-	_data = new float[_numSamples * _numChannels];
+	_data = static_cast<float*>(malloc(_numSamples * _numChannels * sizeof(float)));
 
 	// zero the new data
 	// TODO: it might be useful to allow keeping the old data

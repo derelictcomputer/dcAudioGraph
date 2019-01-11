@@ -1,10 +1,17 @@
 #include "gtest/gtest.h"
 #include "Test_Common.h"
+#include "../dcAudioGraph/LevelMeter.h"
 
 using namespace dc;
 
 void makeBasicGraph(Graph& g, size_t numIo)
 {
+	auto lmId = g.addModule(std::make_unique<LevelMeter>());
+	auto* lm = g.getModuleById(lmId);
+	ASSERT_NE(lm, nullptr);
+	lm->setNumAudioInputs(numIo);
+	lm->setNumAudioOutputs(numIo);
+
 	g.setNumAudioInputs(numIo);
 	EXPECT_EQ(g.getNumAudioInputs(), numIo);
 	g.setNumAudioOutputs(numIo);
@@ -17,7 +24,8 @@ void makeBasicGraph(Graph& g, size_t numIo)
 
 	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
 	{
-		EXPECT_TRUE(dc::Module::connectAudio(aIn, cIdx, aOut, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(aIn, cIdx, lm, cIdx));
+		EXPECT_TRUE(dc::Module::connectAudio(lm, cIdx, aOut, cIdx));
 	}
 }
 

@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\..\dcAudioGraph\AudioBuffer.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp" />
+    <ClCompile Include="..\..\..\dcAudioGraph\LevelMeter.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp" />
   </ItemGroup>
@@ -30,6 +31,7 @@
     <ClInclude Include="..\..\..\dcAudioGraph\ControlBuffer.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\LevelMeter.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
   </ItemGroup>

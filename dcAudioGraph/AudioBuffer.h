@@ -59,7 +59,7 @@ public:
 	// add the contents of a channel to a channel in this buffer
 	void addFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel);
 
-	// copiy the contents of an interleaved raw buffer to this one, and optionally resize it
+	// copy the contents of an interleaved raw buffer to this one, and optionally resize it
 	// Note: resizing will reallocate the underlying data if the total size increases,
 	// so don't call this on the audio thread unless you're sure you're downsizing
 	void fromInterleaved(const float* buffer, size_t numSamples, size_t numChannels, bool allowResize);
