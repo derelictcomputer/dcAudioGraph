@@ -43,23 +43,16 @@ private:
 	ControlBuffer _inputControlBuffer;
 };
 
-class Graph
+class Graph : public Module
 {
 public:
 	Graph();
-	~Graph() = default;
 
-	void init(size_t bufferSize, double sampleRate);
+	std::string getName() override { return "Graph"; }
+
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer);
 
-	size_t getNumAudioInputs() const { return _inputModule.getNumAudioOutputs(); }
-	void setNumAudioInputs(size_t numInputs);
-	size_t getNumAudioOutputs() const { return _outputModule.getNumAudioOutputs(); }
-	void setNumAudioOutputs(size_t numOutputs);
-
-	size_t getNumControlInputs() const { return _inputModule.getNumControlOutputs(); }
 	void setNumControlInputs(size_t numInputs);
-	size_t getNumControlOutputs() const { return _outputModule.getNumControlOutputs(); }
 	void setNumControlOutputs(size_t numOutputs);
 	
 	size_t addModule(std::unique_ptr<Module> module, size_t id = 0);
@@ -75,6 +68,10 @@ public:
 	void clear();
 
 private:
+	void onProcess() override;
+	void onRefreshAudioBuffers() override;
+	void onRefreshControlBuffers() override;
+
 	// serializable
 	GraphInputModule _inputModule;
 	GraphOutputModule _outputModule;
@@ -82,8 +79,5 @@ private:
 	
 	// internals
 	size_t _nextId = 1;
-	size_t _rev = 0;
-	size_t _bufferSize = 0;
-	double _sampleRate = 0;
 };
 }

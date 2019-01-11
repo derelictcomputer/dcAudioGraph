@@ -301,7 +301,7 @@ dc::ModuleParam* dc::Module::getParam(size_t index)
 	return nullptr;
 }
 
-dc::ModuleParam* dc::Module::getParam(std::string id)
+dc::ModuleParam* dc::Module::getParam(const std::string& id)
 {
 	for (size_t i = 0; i < _params.size(); ++i)
 	{
