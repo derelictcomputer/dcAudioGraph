@@ -14,10 +14,13 @@ public:
 	ParamRange(float min, float max, float stepSize);
 	ParamRange(float min, float max, float stepSize, GetNormFn getNormalized, GetRawFn getRaw);
 
+	~ParamRange() = default;
+
 	ParamRange(const ParamRange& other) = default;
 	ParamRange& operator=(const ParamRange& other);
-	ParamRange(ParamRange&& other) noexcept;
-	ParamRange& operator=(ParamRange&& other) noexcept;
+	// We don't need to move these. It's just 5 trivial copies.
+	ParamRange(ParamRange&& other) = delete;
+	ParamRange& operator=(ParamRange&& other) = delete;
 
 	float getNormalized(float rawValue) const;
 	float getRaw(float normalizedValue) const;

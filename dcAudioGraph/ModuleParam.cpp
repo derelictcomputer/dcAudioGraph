@@ -35,28 +35,6 @@ dc::ParamRange& dc::ParamRange::operator=(const ParamRange& other)
 	return *this;
 }
 
-dc::ParamRange::ParamRange(ParamRange&& other) noexcept :
-	_min(other._min),
-	_max(other._max),
-	_stepSize(other._stepSize),
-	_getNormalized(other._getNormalized),
-	_getRaw(other._getRaw)
-{
-}
-
-dc::ParamRange& dc::ParamRange::operator=(ParamRange&& other) noexcept
-{
-	if (this != &other)
-	{
-		_min = other._min;
-		_max = other._max;
-		_stepSize = other._stepSize;
-		_getNormalized = other._getNormalized;
-		_getRaw = other._getRaw;
-	}
-	return *this;
-}
-
 float dc::ParamRange::getNormalized(float rawValue) const
 {
 	const float constrained = constrainRaw(rawValue);

@@ -12,6 +12,47 @@
 #include "Module.h"
 #include <string>
 
+dc::Module::Module()
+{
+	static size_t nextId = 1;
+	_id = nextId++;
+}
+
+void dc::Module::setBufferSize(size_t bufferSize)
+{
+	refreshAudioBuffers(bufferSize);
+}
+
+void dc::Module::setNumAudioInputs(size_t numInputs)
+{
+	while (numInputs < _audioInputs.size())
+	{
+		_audioInputs.pop_back();
+	}
+	while (numInputs > _audioInputs.size())
+	{
+		const size_t idx = _audioInputs.size();
+		_audioInputs.emplace_back(new AudioInput(*this, idx));
+		_audioInputs[idx]->description = "audio " + std::to_string(idx);
+	}
+	refreshAudioBuffers(_audioBuffer.getNumSamples());
+}
+
+void dc::Module::setNumAudioOutputs(size_t numOutputs)
+{
+	while (numOutputs < _audioOutputs.size())
+	{
+		_audioOutputs.pop_back();
+	}
+	while (numOutputs > _audioOutputs.size())
+	{
+		const size_t idx = _audioOutputs.size();
+		_audioOutputs.emplace_back(new AudioOutput(*this, idx));
+		_audioOutputs[idx]->description = "audio " + std::to_string(idx);
+	}
+	refreshAudioBuffers(_audioBuffer.getNumSamples());
+}
+
 std::string dc::Module::getAudioInputDescription(size_t index) const
 {
 	if (index < _audioInputs.size())
@@ -311,41 +352,6 @@ dc::ModuleParam* dc::Module::getParam(const std::string& id)
 		}
 	}
 	return nullptr;
-}
-
-void dc::Module::setBufferSize(size_t bufferSize)
-{
-	refreshAudioBuffers(bufferSize);
-}
-
-void dc::Module::setNumAudioInputs(size_t numInputs)
-{
-	while (numInputs < _audioInputs.size())
-	{
-		_audioInputs.pop_back();
-	}
-	while (numInputs > _audioInputs.size())
-	{
-		const size_t idx = _audioInputs.size();
-		_audioInputs.emplace_back(new AudioInput(*this, idx));
-		_audioInputs[idx]->description = "audio " + std::to_string(idx);
-	}
-	refreshAudioBuffers(_audioBuffer.getNumSamples());
-}
-
-void dc::Module::setNumAudioOutputs(size_t numOutputs)
-{
-	while (numOutputs < _audioOutputs.size())
-	{
-		_audioOutputs.pop_back();
-	}
-	while (numOutputs > _audioOutputs.size())
-	{
-		const size_t idx = _audioOutputs.size();
-		_audioOutputs.emplace_back(new AudioOutput(*this, idx));
-		_audioOutputs[idx]->description = "audio " + std::to_string(idx);
-	}
-	refreshAudioBuffers(_audioBuffer.getNumSamples());
 }
 
 void dc::Module::addControlInput(std::string description, ControlMessage::Type typeFlags)

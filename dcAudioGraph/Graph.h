@@ -46,7 +46,7 @@ private:
 class Graph : public Module
 {
 public:
-	Graph();
+	Graph() = default;
 
 	std::string getName() override { return "Graph"; }
 
@@ -55,7 +55,7 @@ public:
 	void setNumControlInputs(size_t numInputs);
 	void setNumControlOutputs(size_t numOutputs);
 	
-	size_t addModule(std::unique_ptr<Module> module, size_t id = 0);
+	size_t addModule(std::unique_ptr<Module> module);
 	size_t getNumModules() const { return _modules.size(); }
 
 	Module* getInputModule() { return &_inputModule; }

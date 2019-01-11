@@ -35,12 +35,6 @@ void dc::GraphInputModule::onRefreshControlBuffers()
 	_inputControlBuffer.setNumChannels(_controlBuffer.getNumChannels());
 }
 
-dc::Graph::Graph()
-{
-	_inputModule._graphId = _nextId++;
-	_outputModule._graphId = _nextId++;
-}
-
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
 	// copy the input buffers to the graph input
@@ -84,20 +78,22 @@ void dc::Graph::setNumControlOutputs(size_t numOutputs)
 	}
 }
 
-size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t id)
+size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 {
 	if (nullptr != module)
 	{
+		const size_t id = module->getId();
+
+		// disallow adding a module twice to this graph
+		// TODO: disallow a module being added in more than one place
 		for (auto& m : _modules)
 		{
-			if (m->_graphId == id)
+			if (m->getId() == id)
 			{
 				return 0;
 			}
 		}
 
-		id = id > 0 ? id : _nextId++;
-		module->_graphId = id;
 		module->setBufferSize(_audioBuffer.getNumChannels());
 		module->setSampleRate(_sampleRate);
 		_modules.push_back(std::move(module));
@@ -118,19 +114,19 @@ dc::Module* dc::Graph::getModuleAt(size_t index)
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
-	if (_inputModule._graphId == id)
+	if (_inputModule.getId() == id)
 	{
 		return &_inputModule;
 	}
 
-	if (_outputModule._graphId == id)
+	if (_outputModule.getId() == id)
 	{
 		return &_outputModule;
 	}
 
 	for (auto& m : _modules)
 	{
-		if (m->_graphId == id)
+		if (m->getId() == id)
 		{
 			return m.get();
 		}
@@ -151,7 +147,7 @@ void dc::Graph::removeModuleById(size_t id)
 {
 	for (size_t i = 0; i < _modules.size(); ++i)
 	{
-		if (_modules[i]->_graphId == id)
+		if (_modules[i]->getId() == id)
 		{
 			_modules.erase(_modules.begin() + i);
 			return;

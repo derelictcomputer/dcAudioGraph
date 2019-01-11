@@ -22,7 +22,7 @@ class Module
 public:
 	friend class Graph;
 
-	Module() = default;
+	Module();
 
 	// for the love of Dog, don't copy/move these
 	Module(const Module& other) = delete;
@@ -34,6 +34,8 @@ public:
 
 	virtual std::string getName() = 0;
 
+	size_t getId() const { return _id; }
+
 	// Audio I/O
 	void setBufferSize(size_t bufferSize);
 	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
@@ -42,7 +44,6 @@ public:
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
 	void setNumAudioInputs(size_t numInputs);
 	void setNumAudioOutputs(size_t numOutputs);
-
 
 	std::string getAudioInputDescription(size_t index) const;
 	std::string getAudioOutputDescription(size_t index) const;
@@ -67,24 +68,26 @@ public:
 	void disconnectControl();
 	void removeDeadControlConnections();
 
-	// parameters
+	// Parameters
 	size_t getNumParameters() const { return _params.size(); }
 	ModuleParam* getParam(size_t index);
 	ModuleParam* getParam(const std::string& id);
 
 protected:
+	// Control I/O
 	void addControlInput(std::string description, ControlMessage::Type typeFlags);
 	void removeControlInput(size_t index);
 	void addControlOutput(std::string description, ControlMessage::Type typeFlags);
 	void removeControlOutput(size_t index);
+
+	// Parameters
 	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
 		bool serializable = false, bool hasControlInput = false);
 
+	// Processing
 	void process(size_t rev);
-
 	AudioBuffer& getAudioOutputBuffer() { return _audioBuffer; }
 	ControlBuffer& getControlOutputBuffer() { return _controlBuffer; }
-
 	void pushControlMessage(ControlMessage message, size_t outputIndex);
 
 	// override these in your module to actually do things
@@ -145,8 +148,10 @@ private:
 	std::vector<std::shared_ptr<ControlOutput>> _controlOutputs;
 	std::vector<std::unique_ptr<ModuleParam>> _params;
 
-	// the id of this Module instance in its parent graph
-	size_t _graphId = 0;
+	// a unique id for this Module instance *DURING THIS RUN ONLY*
+	// so, don't expect it to persist between sessions
+	// this is mostly helpful for referring to a specific module in the graph at runtime
+	size_t _id = 0;
 	// the last graph revision
 	size_t _rev = 0;
 };
