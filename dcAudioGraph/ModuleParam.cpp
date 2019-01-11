@@ -22,6 +22,41 @@ dc::ParamRange::ParamRange(float min, float max, float stepSize, GetNormFn getNo
 	}
 }
 
+dc::ParamRange& dc::ParamRange::operator=(const ParamRange& other)
+{
+	if (this != &other)
+	{
+		_min = other._min;
+		_max = other._max;
+		_stepSize = other._stepSize;
+		_getNormalized = other._getNormalized;
+		_getRaw = other._getRaw;
+	}
+	return *this;
+}
+
+dc::ParamRange::ParamRange(ParamRange&& other) noexcept :
+	_min(other._min),
+	_max(other._max),
+	_stepSize(other._stepSize),
+	_getNormalized(other._getNormalized),
+	_getRaw(other._getRaw)
+{
+}
+
+dc::ParamRange& dc::ParamRange::operator=(ParamRange&& other) noexcept
+{
+	if (this != &other)
+	{
+		_min = other._min;
+		_max = other._max;
+		_stepSize = other._stepSize;
+		_getNormalized = other._getNormalized;
+		_getRaw = other._getRaw;
+	}
+	return *this;
+}
+
 float dc::ParamRange::getNormalized(float rawValue) const
 {
 	const float constrained = constrainRaw(rawValue);
@@ -57,7 +92,11 @@ float dc::ParamRange::clampToRange(float value, float min, float max)
 
 float dc::ParamRange::snapToStep(float value, float stepSize)
 {
-	return stepSize * std::floor(value / stepSize + 0.5f);
+	if (stepSize > 0.0f)
+	{
+		return stepSize * std::floor(value / stepSize + 0.5f);
+	}
+	return value;
 }
 
 float dc::ParamRange::getNormalizedLinear(float rawValue, float min, float max)
@@ -70,7 +109,7 @@ float dc::ParamRange::getRawLinear(float normalizedValue, float min, float max)
 	return min + (max - min) * normalizedValue;
 }
 
-dc::ModuleParam::ModuleParam(std::string id, std::string displayName, ParamRange& range,
+dc::ModuleParam::ModuleParam(std::string id, std::string displayName, const ParamRange& range,
 	bool serializable, int controlInputIndex) :
 	_id(std::move(id)),
 	_displayName(std::move(displayName)),

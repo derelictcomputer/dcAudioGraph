@@ -77,7 +77,7 @@ protected:
 	void removeControlInput(size_t index);
 	void addControlOutput(std::string description, ControlMessage::Type typeFlags);
 	void removeControlOutput(size_t index);
-	void addParam(const std::string& id, const std::string& displayName, ParamRange& range,
+	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
 		bool serializable = false, bool hasControlInput = false);
 
 	void process(size_t rev);

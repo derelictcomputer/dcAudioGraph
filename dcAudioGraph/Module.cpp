@@ -380,7 +380,7 @@ void dc::Module::removeControlOutput(size_t index)
 	}
 }
 
-void dc::Module::addParam(const std::string& id, const std::string& displayName, ParamRange& range, bool serializable,
+void dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range, bool serializable,
 	bool hasControlInput)
 {
 	int controlInputIdx = -1;

@@ -14,6 +14,11 @@ public:
 	ParamRange(float min, float max, float stepSize);
 	ParamRange(float min, float max, float stepSize, GetNormFn getNormalized, GetRawFn getRaw);
 
+	ParamRange(const ParamRange& other) = default;
+	ParamRange& operator=(const ParamRange& other);
+	ParamRange(ParamRange&& other) noexcept;
+	ParamRange& operator=(ParamRange&& other) noexcept;
+
 	float getNormalized(float rawValue) const;
 	float getRaw(float normalizedValue) const;
 	float constrainRaw(float rawValue) const;
@@ -41,7 +46,7 @@ private:
 class ModuleParam final
 {
 public:
-	ModuleParam(std::string id, std::string displayName, ParamRange& range,
+	ModuleParam(std::string id, std::string displayName, const ParamRange& range,
 		bool serializable = false, int controlInputIndex = -1);
 
 	std::string getId() const { return _id; }
