@@ -23,7 +23,6 @@
     <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -32,7 +31,6 @@
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

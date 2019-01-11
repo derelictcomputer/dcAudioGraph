@@ -10,9 +10,6 @@
     <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\dcAudioGraph\Modules\GraphModule.cpp">
-      <Filter>dcAudioGraph\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
@@ -30,9 +27,6 @@
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\dcAudioGraph\Modules\GraphModule.h">
-      <Filter>dcAudioGraph\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
@@ -46,9 +40,6 @@
   <ItemGroup>
     <Filter Include="dcAudioGraph">
       <UniqueIdentifier>{b579affd-f9ee-4116-98db-06632d14f476}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="dcAudioGraph\Modules">
-      <UniqueIdentifier>{8d1c106e-51e3-4ba9-8f59-ddf12b85fa4a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

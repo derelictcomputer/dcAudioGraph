@@ -69,7 +69,8 @@ int main()
 	audioBuffer.resize(64, 2);
 
     dc::Graph graph;
-    graph.init(64, 48000);
+	graph.setBufferSize(64);
+	graph.setSampleRate(48000);
     graph.setNumAudioInputs(2);
     graph.setNumAudioOutputs(2);
     dc::Module::connectAudio(graph.getInputModule(), 0, graph.getOutputModule(), 0);

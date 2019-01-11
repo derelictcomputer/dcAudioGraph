@@ -35,8 +35,14 @@ public:
 	virtual std::string getName() = 0;
 
 	// Audio I/O
+	void setBufferSize(size_t bufferSize);
+	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
+
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
+	void setNumAudioInputs(size_t numInputs);
+	void setNumAudioOutputs(size_t numOutputs);
+
 
 	std::string getAudioInputDescription(size_t index) const;
 	std::string getAudioOutputDescription(size_t index) const;
@@ -64,14 +70,9 @@ public:
 	// parameters
 	size_t getNumParameters() const { return _params.size(); }
 	ModuleParam* getParam(size_t index);
-	ModuleParam* getParam(std::string id);
+	ModuleParam* getParam(const std::string& id);
 
 protected:
-	void setBufferSize(size_t bufferSize);
-	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
-	void setNumAudioInputs(size_t numInputs);
-	void setNumAudioOutputs(size_t numOutputs);
-
 	void addControlInput(std::string description, ControlMessage::Type typeFlags);
 	void removeControlInput(size_t index);
 	void addControlOutput(std::string description, ControlMessage::Type typeFlags);

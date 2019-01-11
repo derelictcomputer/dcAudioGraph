@@ -21,10 +21,8 @@ void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, ControlB
 
 void dc::GraphInputModule::onProcess()
 {
-	for (size_t cIdx = 0; cIdx < getNumAudioOutputs(); ++cIdx)
-	{
-		_audioBuffer.copyFrom(_inputAudioBuffer, cIdx, cIdx);
-	}
+	_audioBuffer.copyFrom(_inputAudioBuffer, false);
+	_controlBuffer.merge(_inputControlBuffer);
 }
 
 void dc::GraphInputModule::onRefreshAudioBuffers()
@@ -43,24 +41,6 @@ dc::Graph::Graph()
 	_outputModule._graphId = _nextId++;
 }
 
-void dc::Graph::init(size_t bufferSize, double sampleRate)
-{
-	_bufferSize = bufferSize;
-	_sampleRate = sampleRate;
-
-	_inputModule.setBufferSize(bufferSize);
-	_inputModule.setSampleRate(sampleRate);
-
-	_outputModule.setBufferSize(bufferSize);
-	_outputModule.setSampleRate(sampleRate);
-
-	for (auto& m : _modules)
-	{
-		m->setBufferSize(bufferSize);
-		m->setSampleRate(sampleRate);
-	}
-}
-
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
 	// copy the input buffers to the graph input
@@ -76,45 +56,31 @@ void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 	controlBuffer.merge(_outputModule.getControlOutputBuffer());
 }
 
-void dc::Graph::setNumAudioInputs(size_t numInputs)
-{
-	_inputModule.setNumAudioOutputs(numInputs);
-}
-
-void dc::Graph::setNumAudioOutputs(size_t numOutputs)
-{
-	_outputModule.setNumAudioInputs(numOutputs);
-	_outputModule.setNumAudioOutputs(numOutputs);
-}
-
 void dc::Graph::setNumControlInputs(size_t numInputs)
 {
-	while (numInputs < _inputModule.getNumControlInputs())
+	while (numInputs < getNumControlInputs())
 	{
-		_inputModule.removeControlOutput(_inputModule.getNumControlInputs() - 1);
+		removeControlInput(getNumControlInputs() - 1);
 	}
-	while (numInputs > _inputModule.getNumControlInputs())
+	while (numInputs > getNumControlInputs())
 	{
-		const std::string description = "control " + std::to_string(_inputModule.getNumControlInputs());
+		const std::string description = "control " + std::to_string(getNumControlInputs());
 		const auto typeFlags = ControlMessage::Type::All;
-		_inputModule.addControlInput(description, typeFlags);
+		addControlInput(description, typeFlags);
 	}
 }
 
 void dc::Graph::setNumControlOutputs(size_t numOutputs)
 {
-	while (numOutputs < _outputModule.getNumControlInputs())
+	while (numOutputs < getNumControlOutputs())
 	{
-		const size_t idx = _outputModule.getNumControlInputs() - 1;
-		_outputModule.removeControlInput(idx);
-		_outputModule.removeControlOutput(idx);
+		removeControlOutput(getNumControlOutputs() - 1);
 	}
-	while (numOutputs > _outputModule.getNumControlInputs())
+	while (numOutputs > getNumControlOutputs())
 	{
-		const std::string description = "control" + std::to_string(_outputModule.getNumControlInputs());
+		const std::string description = "control" + std::to_string(getNumControlOutputs());
 		const auto typeFlags = ControlMessage::Type::All;
-		_outputModule.addControlInput(description, typeFlags);
-		_outputModule.addControlOutput(description, typeFlags);
+		addControlOutput(description, typeFlags);
 	}
 }
 
@@ -132,7 +98,7 @@ size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t id)
 
 		id = id > 0 ? id : _nextId++;
 		module->_graphId = id;
-		module->setBufferSize(_bufferSize);
+		module->setBufferSize(_audioBuffer.getNumChannels());
 		module->setSampleRate(_sampleRate);
 		_modules.push_back(std::move(module));
 		return id;
@@ -197,4 +163,62 @@ void dc::Graph::clear()
 {
 	_modules.clear();
 	// TODO: decide whether we should mess with the graph I/O
+}
+
+void dc::Graph::onProcess()
+{
+	process(_audioBuffer, _controlBuffer);
+}
+
+void dc::Graph::onRefreshAudioBuffers()
+{
+	const auto bufferSize = _audioBuffer.getNumSamples();
+	const auto numChannels = _audioBuffer.getNumChannels();
+
+	_inputModule.setBufferSize(bufferSize);
+	_inputModule.setSampleRate(_sampleRate);
+	_inputModule.setNumAudioOutputs(numChannels);
+
+	_outputModule.setBufferSize(bufferSize);
+	_outputModule.setSampleRate(_sampleRate);
+	_outputModule.setNumAudioInputs(numChannels);
+	_outputModule.setNumAudioOutputs(numChannels);
+
+	for (auto& m : _modules)
+	{
+		m->setBufferSize(bufferSize);
+		m->setSampleRate(_sampleRate);
+	}
+}
+
+void dc::Graph::onRefreshControlBuffers()
+{
+	{
+		const auto numChannels = getNumControlInputs();
+		while (numChannels < _inputModule.getNumControlOutputs())
+		{
+			_inputModule.removeControlOutput(_inputModule.getNumControlOutputs() - 1);
+		}
+		while (numChannels > _inputModule.getNumControlOutputs())
+		{
+			const std::string description = "control " + std::to_string(_inputModule.getNumControlOutputs());
+			const auto typeFlags = ControlMessage::Type::All;
+			_inputModule.addControlOutput(description, typeFlags);
+		}
+	}
+	{
+		const auto numChannels = getNumControlInputs();
+		while (numChannels < _outputModule.getNumControlOutputs())
+		{
+			_outputModule.removeControlInput(_outputModule.getNumControlInputs() - 1);
+			_outputModule.removeControlOutput(_outputModule.getNumControlOutputs() - 1);
+		}
+		while (numChannels > _outputModule.getNumControlOutputs())
+		{
+			const std::string description = "control " + std::to_string(_outputModule.getNumControlOutputs());
+			const auto typeFlags = ControlMessage::Type::All;
+			_outputModule.addControlInput(description, typeFlags);
+			_outputModule.addControlOutput(description, typeFlags);
+		}
+	}
 }
