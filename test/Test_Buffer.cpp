@@ -22,14 +22,18 @@ TEST(AudioBuffer, FillFunctional)
 	const float value = 0.5f;
 
 	AudioBuffer b1(numSamples, numChannels);
+
+	// manually fill the buffer, so we're not just checking if the thing's consistently wrong
+	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
+	{
+		auto* cPtr = b1.getChannelPointer(cIdx);
+		for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
+		{
+			cPtr[sIdx] = value;
+		}
+	}
+
 	AudioBuffer b2(numSamples, numChannels);
-
-	EXPECT_TRUE(buffersEqual(b1, b2));
-
-	b1.fill(value);
-
-	ASSERT_FALSE(buffersEqual(b1, b2));
-
 	b2.fill(value);
 
 	ASSERT_TRUE(buffersEqual(b1, b2));
@@ -49,6 +53,16 @@ TEST(AudioBuffer, ZeroFunctional)
 	const size_t numChannels = 3;
 
 	AudioBuffer b1(numSamples, numChannels);
+	// manually zero the buffer, so we're not just checking if the thing's consistently wrong
+	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
+	{
+		auto* cPtr = b1.getChannelPointer(cIdx);
+		for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
+		{
+			cPtr[sIdx] = 0.0f;
+		}
+	}
+
 	AudioBuffer b2(numSamples, numChannels);
 	b2.fill(0.9f);
 
@@ -117,6 +131,33 @@ TEST(AudioBuffer, AddFunctional)
 	for (size_t cIdx = 0; cIdx < b1.getNumChannels(); ++cIdx)
 	{
 		b1.addFrom(b2, cIdx, cIdx);
+	}
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+}
+
+TEST(AudioBuffer, ApplyGainFunctional)
+{
+	const size_t numSamples = 1000;
+	const size_t numChannels = 3;
+
+	AudioBuffer b1(numSamples, numChannels);
+	b1.zero();
+	AudioBuffer b2(numSamples, numChannels);
+	b2.fill(1.0f);
+
+	EXPECT_FALSE(buffersEqual(b1, b2));
+
+	b2.applyGain(0.0f);
+
+	ASSERT_TRUE(buffersEqual(b1, b2));
+
+	b1.fill(0.5f);
+	b2.fill(1.0f);
+
+	for (size_t cIdx = 0; cIdx < b1.getNumChannels(); ++cIdx)
+	{
+		b1.applyGain(cIdx, 2.0f);
 	}
 
 	ASSERT_TRUE(buffersEqual(b1, b2));

@@ -8,7 +8,7 @@
 
 namespace dc
 {
-class AudioBuffer
+class AudioBuffer final
 {
 public:
 	// creates an empty buffer that's not useful until resize() is called
@@ -17,6 +17,13 @@ public:
 	// creates a buffer with a number of samples and channels
 	// Note: the buffer will be filled with garbage. Clear it out before you use it.
 	AudioBuffer(size_t numSamples, size_t numChannels);
+
+	// Prevent copies and moves
+	// TODO: it should actually be straightforward to implement these, so maybe do that
+	AudioBuffer(const AudioBuffer& other) = delete;
+	AudioBuffer& operator=(const AudioBuffer& other) = delete;
+	AudioBuffer(AudioBuffer&& other) = delete;
+	AudioBuffer& operator=(AudioBuffer&& other) = delete;
 
 	~AudioBuffer();
 
@@ -53,6 +60,11 @@ public:
 	void addFrom(const AudioBuffer& other);
 	// add the contents of a channel to a channel in this buffer
 	void addFrom(const AudioBuffer& other, size_t fromChannel, size_t toChannel);
+
+	// apply gain to the whole buffer
+	void applyGain(float gain);
+	// apply gain to a channel
+	void applyGain(size_t channel, float gain);
 
 	// copy the contents of an interleaved raw buffer to this one, and optionally resize it
 	// Note: resizing will reallocate the underlying data if the total size increases,

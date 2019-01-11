@@ -36,17 +36,13 @@ void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 
 	// allocate the new data
 	_data = static_cast<float*>(malloc(_numSamples * _numChannels * sizeof(float)));
-
-	// zero the new data
-	// TODO: it might be useful to allow keeping the old data
-	zero();
 }
 
 void dc::AudioBuffer::fill(float value)
 {
 	if (nullptr != _data)
 	{
-		std::fill(_data, _data + sizeof(_data), value);
+		std::fill(_data, _data + _numSamples * _numChannels, value);
 	}
 }
 
@@ -122,6 +118,25 @@ void dc::AudioBuffer::addFrom(const AudioBuffer& other, size_t fromChannel, size
 		for (size_t sIdx = 0; sIdx < numSamplesToAdd; ++sIdx)
 		{
 			toPtr[sIdx] = fromPtr[sIdx];
+		}
+	}
+}
+
+void dc::AudioBuffer::applyGain(float gain)
+{
+	for (size_t cIdx = 0; cIdx < _numChannels; ++cIdx)
+	{
+		applyGain(cIdx, gain);
+	}
+}
+
+void dc::AudioBuffer::applyGain(size_t channel, float gain)
+{
+	if (auto* cPtr = getChannelPointer(channel))
+	{
+		for (size_t sIdx = 0; sIdx < _numSamples; ++sIdx)
+		{
+			cPtr[sIdx] *= gain;
 		}
 	}
 }
