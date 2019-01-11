@@ -1,16 +1,6 @@
-/*
-  ==============================================================================
-
-    ModuleBase.cpp
-    Created: 25 Dec 2018 12:25:16pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
-
 #include <algorithm>
-#include "Module.h"
 #include <string>
+#include "Module.h"
 
 dc::Module::Module()
 {

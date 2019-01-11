@@ -1,8 +1,16 @@
+/*
+ * A buffer of control messages.
+ */
+
 #pragma once
+
 #include <vector>
 
 namespace dc
 {
+// A single message in a control buffer.
+// This can be something like a trigger, or a continuous parameter
+// Implemented as a tagged union for simplicity and memory efficiency
 struct ControlMessage final
 {
 	// Specifies the type of the message.

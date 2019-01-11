@@ -1,6 +1,6 @@
-#include "ModuleParam.h"
 #include <algorithm>
 #include <utility>
+#include "ModuleParam.h"
 
 dc::ParamRange::ParamRange(float min, float max, float stepSize) :
 	_min(min),

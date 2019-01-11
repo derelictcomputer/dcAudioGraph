@@ -1,26 +1,19 @@
 /*
-  ==============================================================================
-
-    Graph.h
-    Created: 25 Dec 2018 12:23:17pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
+ * Usually the main entry point into the library.
+ * A graph is a module that can contain other modules, 
+ * and also provides an interface for an audio renderer to use.
+ */
 
 #pragma once
-#include <vector>
+
 #include "Module.h"
 
 namespace dc
 {
 // a module for output from a graph
-// Note: this module is really just a passthrough, but it helps for clarity
+// Note: this module is really just a passthrough
 class GraphOutputModule final : public Module
 {
-public:
-	std::string getName() override { return "Graph Output"; }
-
 protected:
 	void onProcess() override {}
 };
@@ -30,8 +23,6 @@ class GraphInputModule final : public Module
 {
 public:
 	void setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer);
-
-	std::string getName() override { return "Graph Input"; }
 
 protected:
 	void onProcess() override;
@@ -48,13 +39,12 @@ class Graph : public Module
 public:
 	Graph() = default;
 
-	std::string getName() override { return "Graph"; }
-
+	// Call this from your audio callback for the main graph to process all of your modules.
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer);
 
 	void setNumControlInputs(size_t numInputs);
 	void setNumControlOutputs(size_t numOutputs);
-	
+
 	size_t addModule(std::unique_ptr<Module> module);
 	size_t getNumModules() const { return _modules.size(); }
 
@@ -67,17 +57,15 @@ public:
 	void removeModuleById(size_t id);
 	void clear();
 
-private:
+protected:
 	void onProcess() override;
 	void onRefreshAudioBuffers() override;
 	void onRefreshControlBuffers() override;
 
+private:
 	// serializable
 	GraphInputModule _inputModule;
 	GraphOutputModule _outputModule;
 	std::vector<std::unique_ptr<Module>> _modules;
-	
-	// internals
-	size_t _nextId = 1;
 };
 }

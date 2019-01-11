@@ -1,3 +1,8 @@
+/*
+ * Provides simple RMS readings for the most recent buffer,
+ * and passes through audio and control.
+ */
+
 #pragma once
 
 #include "Module.h"
@@ -8,8 +13,6 @@ class LevelMeter : public Module
 {
 public:
 	LevelMeter() = default;
-
-	std::string getName() override { return "Level Meter"; }
 
 	float getLevel(size_t channel);
 

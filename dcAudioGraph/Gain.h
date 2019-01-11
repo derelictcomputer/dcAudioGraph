@@ -1,3 +1,7 @@
+/*
+ * A simple gain slider, which can also be used as a simple summing bus.
+ */
+
 #pragma once
 
 #include "Module.h"
@@ -9,10 +13,7 @@ class Gain : public Module
 public:
 	Gain();
 
-	std::string getName() override { return "Gain"; }
-
 protected:
 	void onProcess() override;
-
 };
 }

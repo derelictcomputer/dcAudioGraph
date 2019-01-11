@@ -1,6 +1,11 @@
+/*
+ * A single parameter in a module.
+ * Add these to your Module classes to define control of your algorithm.
+ */
+
 #pragma once
-#include <functional>
 #include <atomic>
+#include <functional>
 
 namespace dc
 {

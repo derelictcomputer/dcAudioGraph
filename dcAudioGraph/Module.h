@@ -1,12 +1,17 @@
 /*
-  ==============================================================================
-
-    ModuleBase.h
-    Created: 25 Dec 2018 12:25:16pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
+ * This is where most of the work takes place.
+ * A module has some number of audio and control I/O,
+ * and pulls from anything that is connected to its inputs
+ * before processing and passing to modules that are connected
+ * to its outputs.
+ * 
+ * Derive from this to make concrete modules that actually do things
+ * to sound and control.
+ * 
+ * Note: by default, a Module will pass through both audio and control.
+ * If you don't want that, make sure to clear the buffers in your onProcess().
+ * 
+ */
 
 #pragma once
 #include <memory>
@@ -20,6 +25,7 @@ namespace dc
 class Module
 {
 public:
+	// let graphs reach into here so they can do their work
 	friend class Graph;
 
 	Module();
@@ -32,8 +38,9 @@ public:
 
 	virtual ~Module() = default;
 
-	virtual std::string getName() = 0;
-
+	// a unique id for this Module instance *DURING THIS RUN ONLY*
+	// so, don't expect it to persist between sessions
+	// this is mostly helpful for referring to a specific module in the graph at runtime
 	size_t getId() const { return _id; }
 
 	// Audio I/O
@@ -111,14 +118,14 @@ private:
 
 	using AudioOutput = ModuleIo;
 
-	struct AudioInput : ModuleIo
+	struct AudioInput final : ModuleIo
 	{
 		AudioInput(Module& parent, size_t index) : ModuleIo(parent, index) {}
 
 		std::vector<std::weak_ptr<AudioOutput>> connections;
 	};
 
-	struct ControlOutput : ModuleIo
+	struct ControlOutput final : ModuleIo
 	{
 		ControlOutput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
 		{
@@ -128,7 +135,7 @@ private:
 		ControlMessage::Type typeFlags;
 	};
 
-	struct ControlInput : ModuleIo
+	struct ControlInput final : ModuleIo
 	{
 		ControlInput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
 		{

@@ -33,6 +33,6 @@ void dc::LevelMeter::onRefreshAudioBuffers()
 	}
 	while (numChannels > _levels.size())
 	{
-		_levels.push_back(0.0f);
+		_levels.emplace_back(0.0f);
 	}
 }

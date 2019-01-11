@@ -1,15 +1,5 @@
-/*
-  ==============================================================================
-
-    AudioBuffer.cpp
-    Created: 27 Dec 2018 3:19:06pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
-
-#include "AudioBuffer.h"
 #include <algorithm>
+#include "AudioBuffer.h"
 
 dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
 {

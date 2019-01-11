@@ -1,15 +1,5 @@
-/*
-  ==============================================================================
-
-    Graph.cpp
-    Created: 25 Dec 2018 12:23:17pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
-
-#include "Graph.h"
 #include <string>
+#include "Graph.h"
 
 void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer)
 {

@@ -8,6 +8,7 @@ dc::Gain::Gain()
 
 void dc::Gain::onProcess()
 {
+	// TODO: add an "apply gain" function to the AudioBuffer class and just use that
 	const auto gain = getParam("gain")->getRaw();
 	for (size_t cIdx = 0; cIdx < _audioBuffer.getNumChannels(); ++cIdx)
 	{

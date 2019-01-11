@@ -1,20 +1,13 @@
 /*
-  ==============================================================================
-
-    AudioBuffer.h
-    Created: 27 Dec 2018 3:19:06pm
-    Author:  Charlie Huguenard
-
-  ==============================================================================
-*/
+ * a de-interleaved audio buffer
+ * Note: this class is not thread-safe, so if you're operating on one in multiple threads,
+ * be sure to implement your own synchronization
+ */
 
 #pragma once
 
 namespace dc
 {
-// a de-interleaved audio buffer
-// Note: this class is not thread-safe, so if you're operating on one in multiple threads,
-// be sure to implement your own synchronization
 class AudioBuffer
 {
 public:
@@ -22,6 +15,7 @@ public:
 	AudioBuffer() = default;
 
 	// creates a buffer with a number of samples and channels
+	// Note: the buffer will be filled with garbage. Clear it out before you use it.
 	AudioBuffer(size_t numSamples, size_t numChannels);
 
 	~AudioBuffer();
@@ -32,6 +26,7 @@ public:
 	size_t getNumChannels() const { return _numChannels; }
 
 	// set the number of samples and channels in the buffer
+	// Note: the buffer will be filled with garbage. Clear it out before you use it.
 	// Note: this will reallocate the underlying data if the total size increases,
 	// so don't call this on the audio thread unless you're sure you're downsizing
 	void resize(size_t numSamples, size_t numChannels);
