@@ -24,17 +24,10 @@ struct ControlMessage final
 		All		= 0xffff
 	};
 
-	using NoParams = uint8_t;
-
 	struct NoteParams
 	{
 		int noteNumber = 0;
 		float gain = 1.0f;
-	};
-
-	struct FloatParams
-	{
-		float value = 0.0f;
 	};
 
 	ControlMessage();
@@ -45,9 +38,9 @@ struct ControlMessage final
 
 	union
 	{
-		NoParams noParams;
-		NoteParams noteParams;
-		FloatParams floatParams;
+		uint8_t noParam;
+		NoteParams noteParam;
+		float floatParam;
 	};
 };
 

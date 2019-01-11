@@ -30,7 +30,8 @@ public:
 
 	Module();
 
-	// for the love of Dog, don't copy/move these
+	// Prevent copy/move
+	// TODO: This is probably going to be a necessary feature for graph editors
 	Module(const Module& other) = delete;
 	Module& operator=(const Module& other) = delete;
 	Module(Module&& other) = delete;
@@ -40,7 +41,7 @@ public:
 
 	// a unique id for this Module instance *DURING THIS RUN ONLY*
 	// so, don't expect it to persist between sessions
-	// this is mostly helpful for referring to a specific module in the graph at runtime
+	// this is mostly helpful for referring to a specific module in a graph at runtime
 	size_t getId() const { return _id; }
 
 	// Audio I/O

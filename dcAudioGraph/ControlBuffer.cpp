@@ -2,7 +2,7 @@
 
 dc::ControlMessage::ControlMessage() : type(Type::Trigger), sampleOffset(0)
 {
-	noParams = {};
+	noParam = 0;
 }
 
 dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
@@ -12,16 +12,16 @@ dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffse
 	{
 	case Type::Note:
 		this->type = type;
-		noteParams = { 0, 1.0f };
+		noteParam = { 0, 1.0f };
 		break;
 	case Type::Float:
 		this->type = type;
-		floatParams = { 0.0f };
+		floatParam = 0.0f;
 		break;
 	case Type::Trigger:
 	default:
 		this->type = Type::Trigger;
-		noParams = 0;
+		noParam = 0;
 		break;
 	}
 }
@@ -49,6 +49,7 @@ dc::ControlBuffer::Channel::Iterator::Iterator() : _channel(_invalidChannel)
 
 dc::ControlBuffer::Channel::Channel()
 {
+	// try to avoid re-allocations in the process chain
 	// TODO: this should be configurable somewhere
 	_messages.reserve(1024);
 }
@@ -56,6 +57,7 @@ dc::ControlBuffer::Channel::Channel()
 void dc::ControlBuffer::Channel::insert(ControlMessage& message)
 {
 	// keep the buffer in order of sample offset
+	// TODO: faster insert, in case this gets used for large numbers of messages
 	for (auto it = _messages.begin(); it != _messages.end(); ++it)
 	{
 		if (message.sampleOffset <= it->sampleOffset)
