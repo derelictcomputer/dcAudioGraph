@@ -40,7 +40,7 @@ public:
 	Graph() = default;
 
 	// Call this from your audio callback for the main graph to process all of your modules.
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer);
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool isTopLevel = true);
 
 	void setNumControlInputs(size_t numInputs);
 	void setNumControlOutputs(size_t numOutputs);

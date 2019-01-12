@@ -25,13 +25,13 @@ void dc::GraphInputModule::onRefreshControlBuffers()
 	_inputControlBuffer.setNumChannels(_controlBuffer.getNumChannels());
 }
 
-void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
+void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool isTopLevel)
 {
 	// copy the input buffers to the graph input
 	_inputModule.setInputData(audioBuffer, controlBuffer);
 
 	// process the graph
-	_outputModule.process(++_rev);
+	_outputModule.process(isTopLevel ? ++_rev : _rev);
 
 	// copy the output
 	audioBuffer.zero();
@@ -153,7 +153,7 @@ void dc::Graph::clear()
 
 void dc::Graph::onProcess()
 {
-	process(_audioBuffer, _controlBuffer);
+	process(_audioBuffer, _controlBuffer, false);
 }
 
 void dc::Graph::onRefreshAudioBuffers()
