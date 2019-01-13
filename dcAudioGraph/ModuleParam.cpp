@@ -97,6 +97,29 @@ dc::ModuleParam::ModuleParam(std::string id, std::string displayName, const Para
 {
 }
 
+dc::ModuleParam::ModuleParam(const ModuleParam& other) :
+_id(other._id),
+_displayName(other._displayName),
+_range(other._range),
+_serializable(other._serializable),
+_controlInputIndex(other._controlInputIndex)
+{
+
+}
+
+dc::ModuleParam& dc::ModuleParam::operator=(const ModuleParam& other)
+{
+	if (this != &other)
+	{
+		_id = other._id;
+		_displayName = other._displayName;
+		_range = other._range;
+		_serializable = other._serializable;
+		_controlInputIndex = other._controlInputIndex;
+	}
+	return *this;
+}
+
 float dc::ModuleParam::getNormalized() const
 {
 	return _range.getNormalized(_value);

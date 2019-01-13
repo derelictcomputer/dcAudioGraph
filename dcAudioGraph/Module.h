@@ -65,11 +65,18 @@ public:
 	size_t getNumControlInputs() const { return _controlInputs.size(); }
 	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
 
+	size_t getNumParams() const { return _params.size(); }
+	ModuleParam* getParamAt(size_t index);
+	ModuleParam* getParamById(const std::string& id);
+
 protected:
 	void addAudioIo(bool isInput);
 	void removeAudioIo(size_t index, bool isInput);
 	void addControlIo(bool isInput, ControlMessage::Type typeFlags);
 	void removeControlIo(size_t index, bool isInput);
+
+	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range, 
+		bool serializable = false, bool hasControlInput = false);
 
 	// implement this to do something to audio or control
 	virtual void process() = 0;
@@ -115,6 +122,7 @@ private:
 	std::vector<Io> _audioOutputs;
 	std::vector<ControlIo> _controlInputs;
 	std::vector<ControlIo> _controlOutputs;
+	std::vector<ModuleParam> _params;
 
 	size_t _id = 0;
 	size_t _rev = 0;

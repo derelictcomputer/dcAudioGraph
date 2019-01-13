@@ -2,6 +2,27 @@
 #include "Graph.h"
 #include "Module.h"
 
+dc::ModuleParam* dc::Module::getParamAt(size_t index)
+{
+	if (index < _params.size())
+	{
+		return &_params[index];
+	}
+	return nullptr;
+}
+
+dc::ModuleParam* dc::Module::getParamById(const std::string& id)
+{
+	for (auto& p : _params)
+	{
+		if (p.getId() == id)
+		{
+			return &p;
+		}
+	}
+	return nullptr;
+}
+
 void dc::Module::addAudioIo(bool isInput)
 {
 	if (isInput)
@@ -69,6 +90,19 @@ void dc::Module::removeControlIo(size_t index, bool isInput)
 	refreshControlBuffer();
 	controlIoCountChanged();
 }
+
+void dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
+	bool serializable, bool hasControlInput)
+{
+	int controlInputIdx = -1;
+	if (hasControlInput)
+	{
+		controlInputIdx = static_cast<int>(_controlInputs.size());
+		addControlIo(true, ControlMessage::Float);
+	}
+	_params.emplace_back(id, displayName, range, serializable, controlInputIdx);
+}
+
 
 void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 {
