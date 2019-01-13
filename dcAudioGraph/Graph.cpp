@@ -12,6 +12,8 @@ bool dc::Graph::Connection::operator==(const Connection& other) const
 
 dc::Graph::Graph()
 {
+	_input._id = _nextModuleId++;
+	_output._id = _nextModuleId++;
 }
 
 void dc::Graph::setBlockSize(size_t blockSize)
@@ -133,6 +135,16 @@ dc::Module* dc::Graph::getModuleAt(size_t index)
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
+	if (id == _input.getId())
+	{
+		return &_input;
+	}
+
+	if (id == _output.getId())
+	{
+		return &_output;
+	}
+
 	for (auto& m : _modules)
 	{
 		if (m->_id == id)
@@ -251,6 +263,46 @@ void dc::Graph::process()
 	process(_audioBuffer, _controlBuffer, false);
 }
 
+void dc::Graph::audioIoCountChanged()
+{
+	while (getNumAudioInputs() < _input.getNumAudioOutputs())
+	{
+		_input.removeAudioIo(_input.getNumAudioOutputs() - 1, false);
+	}
+	while (getNumAudioInputs() > _input.getNumAudioOutputs())
+	{
+		_input.addAudioIo(false);
+	}
+	while (getNumAudioOutputs() < _output.getNumAudioInputs())
+	{
+		_output.removeAudioIo(_output.getNumAudioInputs() - 1, true);
+	}
+	while (getNumAudioOutputs() > _output.getNumAudioInputs())
+	{
+		_output.addAudioIo(true);
+	}
+}
+
+void dc::Graph::controlIoCountChanged()
+{
+	while (getNumControlInputs() < _input.getNumControlOutputs())
+	{
+		_input.removeControlIo(_input.getNumControlOutputs() - 1, false);
+	}
+	while (getNumControlInputs() > _input.getNumControlOutputs())
+	{
+		_input.addControlIo(false, ControlMessage::All);
+	}
+	while (getNumControlOutputs() < _output.getNumControlInputs())
+	{
+		_output.removeControlIo(_output.getNumControlInputs() - 1, true);
+	}
+	while (getNumControlOutputs() > _output.getNumControlInputs())
+	{
+		_output.addControlIo(true, ControlMessage::All);
+	}
+}
+
 bool dc::Graph::connectionExists(const Connection& connection)
 {
 	for (auto& c : _allConnections)
@@ -263,7 +315,7 @@ bool dc::Graph::connectionExists(const Connection& connection)
 	return false;
 }
 
-bool dc::Graph::getModulesForConnection(const Connection& connection, Module* from, Module* to)
+bool dc::Graph::getModulesForConnection(const Connection& connection, Module*& from, Module*& to)
 {
 	from = getModuleById(connection.fromId);
 	to = getModuleById(connection.toId);

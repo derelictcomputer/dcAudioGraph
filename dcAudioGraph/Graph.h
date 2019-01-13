@@ -11,18 +11,6 @@
 
 namespace dc
 {
-class GraphInputModule final : public Module
-{
-protected:
-	void process() override {}
-};
-
-class GraphOutputModule final : public Module
-{
-protected:
-	void process() override {}
-};
-
 class Graph final : public Module
 {
 public:
@@ -54,15 +42,25 @@ public:
 
 protected:
 	void process() override;
+	void audioIoCountChanged() override;
+	void controlIoCountChanged() override;
 
 private:
+	// Just a passthrough for processing graph I/O
+	// This also provides a way to connect modules in the graph to the outside world
+	class GraphIoModule final : public Module
+	{
+	protected:
+		void process() override {}
+	};
+
 	bool connectionExists(const Connection& connection);
-	bool getModulesForConnection(const Connection& connection, Module* from, Module* to);
+	bool getModulesForConnection(const Connection& connection, Module*& from, Module*& to);
 	bool connectionCreatesLoop(const Connection& connection);
 	bool moduleIsInputTo(Module* from, Module* to);
 
-	GraphInputModule _input;
-	GraphOutputModule _output;
+	GraphIoModule _input;
+	GraphIoModule _output;
 	std::vector<std::unique_ptr<Module>> _modules;
 	std::vector<Connection> _allConnections;
 

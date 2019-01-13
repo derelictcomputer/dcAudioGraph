@@ -13,10 +13,9 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	lm->setNumChannels(numIo);
 
 	auto gId = g.addModule(std::make_unique<Gain>());
-	auto* gain = g.getModuleById(gId);
+	auto* gain = dynamic_cast<Gain*>(g.getModuleById(gId));
 	ASSERT_NE(gain, nullptr);
-	gain->setNumAudioInputs(numIo);
-	gain->setNumAudioOutputs(numIo);
+	gain->setNumChannels(numIo);
 
 	g.setNumAudioInputs(numIo);
 	EXPECT_EQ(g.getNumAudioInputs(), numIo);
@@ -30,9 +29,19 @@ void makeBasicGraph(Graph& g, size_t numIo)
 
 	for (size_t cIdx = 0; cIdx < numIo; ++cIdx)
 	{
-		EXPECT_TRUE(dc::Module::connectAudio(aIn, cIdx, gain, cIdx));
-		EXPECT_TRUE(dc::Module::connectAudio(gain, cIdx, lm, cIdx));
-		EXPECT_TRUE(dc::Module::connectAudio(lm, cIdx, aOut, cIdx));
+		bool res;
+		{
+			res = g.addConnection({ aIn->getId(), cIdx, gain->getId(), cIdx, Module::Connection::Audio });
+			EXPECT_TRUE(res);
+		}
+		{
+			res = g.addConnection({ gain->getId(), cIdx, lm->getId(), cIdx, Module::Connection::Audio });
+			EXPECT_TRUE(res);
+		}
+		{
+			res = g.addConnection({ lm->getId(), cIdx, aOut->getId(), cIdx, Module::Connection::Audio });
+			EXPECT_TRUE(res);
+		}
 	}
 }
 
@@ -52,7 +61,7 @@ TEST(Graph, GraphIOBasic)
 
 	Graph g;
 	makeBasicGraph(g, numIo);
-	g.setBufferSize(numSamples);
+	g.setBlockSize(numSamples);
 	g.setSampleRate(44100);
 	g.process(outBuffer, controlBuffer);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
@@ -74,7 +83,7 @@ TEST(Graph, GraphIOBasic_Loop)
 
 	Graph g;
 	makeBasicGraph(g, numIo);
-	g.setBufferSize(numSamples);
+	g.setBlockSize(numSamples);
 	g.setSampleRate(44100);
 
 	for (int i = 0; i < 1000; ++i)

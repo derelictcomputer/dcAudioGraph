@@ -20,7 +20,6 @@ public:
 
 protected:
 	void process() override;
-	void audioIoCountChanged() override;
 
 	std::vector<float> _levels;
 };

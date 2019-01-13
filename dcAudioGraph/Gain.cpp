@@ -8,6 +8,21 @@ dc::Gain::Gain()
 	*/
 }
 
+void dc::Gain::setNumChannels(size_t numChannels)
+{
+	while (numChannels < getNumAudioInputs())
+	{
+		const size_t idx = getNumAudioInputs() - 1;
+		removeAudioIo(idx, true);
+		removeAudioIo(idx, false);
+	}
+	while (numChannels > getNumAudioInputs())
+	{
+		addAudioIo(true);
+		addAudioIo(false);
+	}
+}
+
 void dc::Gain::process()
 {
 	//const auto gain = getParam("gain")->getRaw();

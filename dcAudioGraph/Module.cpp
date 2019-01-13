@@ -13,6 +13,7 @@ void dc::Module::addAudioIo(bool isInput)
 		_audioOutputs.emplace_back("audio");
 	}
 	refreshAudioBuffer();
+	audioIoCountChanged();
 }
 
 void dc::Module::removeAudioIo(size_t index, bool isInput)
@@ -32,6 +33,7 @@ void dc::Module::removeAudioIo(size_t index, bool isInput)
 		}
 	}
 	refreshAudioBuffer();
+	audioIoCountChanged();
 }
 
 void dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
@@ -45,6 +47,7 @@ void dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
 		_controlOutputs.emplace_back("control", typeFlags);
 	}
 	refreshControlBuffer();
+	controlIoCountChanged();
 }
 
 void dc::Module::removeControlIo(size_t index, bool isInput)
@@ -64,6 +67,7 @@ void dc::Module::removeControlIo(size_t index, bool isInput)
 		}
 	}
 	refreshControlBuffer();
+	controlIoCountChanged();
 }
 
 void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)

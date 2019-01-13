@@ -49,6 +49,12 @@ public:
 	Module() = default;
 	virtual ~Module() = default;
 
+	// TODO: allow copy/move of modules, it'll be needed for eg. editor applications
+	Module(const Module& other) = delete;
+	Module& operator=(const Module& other) = delete;
+	Module(Module&& other) = delete;
+	Module& operator=(Module&& other) = delete;
+
 	size_t getId() const { return _id; }
 
 	size_t getBlockSize() const { return _blockSize; }

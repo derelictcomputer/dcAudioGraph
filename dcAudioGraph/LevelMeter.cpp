@@ -16,11 +16,13 @@ void dc::LevelMeter::setNumChannels(size_t numChannels)
 		const size_t idx = getNumAudioInputs() - 1;
 		removeAudioIo(idx, true);
 		removeAudioIo(idx, false);
+		_levels.pop_back();
 	}
 	while (numChannels > getNumAudioInputs())
 	{
 		addAudioIo(true);
 		addAudioIo(false);
+		_levels.emplace_back(0.0f);
 	}
 }
 
@@ -36,18 +38,5 @@ void dc::LevelMeter::process()
 			sum += sample * sample;
 		}
 		_levels[cIdx] = std::sqrt(sum / _audioBuffer.getNumSamples());
-	}
-}
-
-void dc::LevelMeter::audioIoCountChanged()
-{
-	const auto numChannels = _audioBuffer.getNumChannels();
-	while (numChannels < _levels.size())
-	{
-		_levels.pop_back();
-	}
-	while (numChannels > _levels.size())
-	{
-		_levels.emplace_back(0.0f);
 	}
 }
