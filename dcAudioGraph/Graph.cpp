@@ -238,6 +238,17 @@ void dc::Graph::removeConnection(const Connection& connection)
 	}
 }
 
+
+bool dc::Graph::getConnection(size_t index, Connection& connectionOut)
+{
+	if (index < _allConnections.size())
+	{
+		connectionOut = _allConnections[index];
+		return true;
+	}
+	return false;
+}
+
 void dc::Graph::disconnectModule(size_t id)
 {
 	if (auto* m = getModuleById(id))

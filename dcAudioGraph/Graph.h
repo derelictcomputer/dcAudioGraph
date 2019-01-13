@@ -38,6 +38,8 @@ public:
 
 	bool addConnection(const Connection& connection);
 	void removeConnection(const Connection& connection);
+	size_t getNumConnections() const { return _allConnections.size(); }
+	bool getConnection(size_t index, Connection& connectionOut);
 	void disconnectModule(size_t id);
 
 protected:
