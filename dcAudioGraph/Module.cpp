@@ -1,396 +1,111 @@
 #include <algorithm>
-#include <string>
+#include "Graph.h"
 #include "Module.h"
 
-dc::Module::Module()
-{
-	static size_t nextId = 1;
-	_id = nextId++;
-}
-
-void dc::Module::setBufferSize(size_t bufferSize)
-{
-	refreshAudioBuffers(bufferSize);
-}
-
-void dc::Module::setNumAudioInputs(size_t numInputs)
-{
-	while (numInputs < _audioInputs.size())
-	{
-		_audioInputs.pop_back();
-	}
-	while (numInputs > _audioInputs.size())
-	{
-		const size_t idx = _audioInputs.size();
-		_audioInputs.emplace_back(new AudioInput(*this, idx));
-		_audioInputs[idx]->description = "audio " + std::to_string(idx);
-	}
-	refreshAudioBuffers(_audioBuffer.getNumSamples());
-}
-
-void dc::Module::setNumAudioOutputs(size_t numOutputs)
-{
-	while (numOutputs < _audioOutputs.size())
-	{
-		_audioOutputs.pop_back();
-	}
-	while (numOutputs > _audioOutputs.size())
-	{
-		const size_t idx = _audioOutputs.size();
-		_audioOutputs.emplace_back(new AudioOutput(*this, idx));
-		_audioOutputs[idx]->description = "audio " + std::to_string(idx);
-	}
-	refreshAudioBuffers(_audioBuffer.getNumSamples());
-}
-
-std::string dc::Module::getAudioInputDescription(size_t index) const
-{
-	if (index < _audioInputs.size())
-	{
-		return _audioInputs[index]->description;
-	}
-	return "";
-}
-
-std::string dc::Module::getAudioOutputDescription(size_t index) const
-{
-	if (index < _audioOutputs.size())
-	{
-		return _audioOutputs[index]->description;
-	}
-	return "";
-}
-
-bool dc::Module::connectAudio(Module* from, Module* to)
-{
-	if (nullptr == from || nullptr == to)
-	{
-		return false;
-	}
-
-	const size_t numChannelsToConnect = std::min(from->getNumAudioOutputs(), to->getNumAudioInputs());
-
-	for (size_t cIdx = 0; cIdx < numChannelsToConnect; ++cIdx)
-	{
-		if (!connectAudio(from, cIdx, to, cIdx))
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-bool dc::Module::connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx)
-{
-	if (nullptr == from || nullptr == to
-		|| fromIdx >= from->getNumAudioOutputs() || toIdx >= to->getNumAudioInputs())
-	{
-		return false;
-	}
-
-	// check for duplicates
-	auto& aIn = to->_audioInputs[toIdx];
-	auto& targetAOut = from->_audioOutputs[fromIdx];
-	for (auto& existingOut : aIn->connections)
-	{
-		if (auto eoPtr = existingOut.lock())
-		{
-			if (eoPtr.get() == targetAOut.get())
-			{
-				return false;
-			}
-		}
-	}
-
-	// TODO: check for loops, even though we technically handle those ok now
-
-	aIn->connections.emplace_back(targetAOut);
-
-	return true;
-}
-
-void dc::Module::disconnectAudio(Module* from, Module* to)
-{
-	if (nullptr == from || nullptr == to)
-	{
-		return;
-	}
-
-	for (auto& aIn : to->_audioInputs)
-	{
-		size_t aOutIdx = 0;
-		while (aOutIdx < aIn->connections.size())
-		{
-			const auto connection = aIn->connections[aOutIdx].lock();
-
-			// go ahead and delete dead connections
-			if (!connection)
-			{
-				aIn->connections.erase(aIn->connections.begin() + aOutIdx);
-				continue;
-			}
-
-			// if the connection parent is the from module, delete
-			if (&connection->parent == from)
-			{
-				aIn->connections.erase(aIn->connections.begin() + aOutIdx);
-				continue;
-			}
-			
-			++aOutIdx;
-		}
-	}
-}
-
-void dc::Module::disconnectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx)
-{
-	if (nullptr == from || nullptr == to 
-		|| fromIdx >= from->getNumAudioOutputs() || toIdx >= to->getNumAudioInputs())
-	{
-		return;
-	}
-
-	size_t aOutIdx = 0;
-	auto& aIn = to->_audioInputs[toIdx];
-	auto& aOut = from->_audioOutputs[fromIdx];
-	while (aOutIdx < aIn->connections.size())
-	{
-		const auto existingOut = aIn->connections[aOutIdx].lock();
-		if (existingOut && existingOut.get() == aOut.get())
-		{
-			aIn->connections.erase(aIn->connections.begin() + aOutIdx);
-			continue;
-		}
-		++aOutIdx;
-	}
-}
-
-void dc::Module::disconnectAudio()
-{
-	for (auto& aIn : _audioInputs)
-	{
-		aIn->connections.clear();
-	}
-}
-
-void dc::Module::removeDeadAudioConnections()
-{
-	for (auto& aIn : _audioInputs)
-	{
-		for (size_t oIdx = 0; oIdx < aIn->connections.size();)
-		{
-			if (aIn->connections[oIdx].expired())
-			{
-				aIn->connections.erase(aIn->connections.begin() + oIdx);
-				continue;
-			}
-			++oIdx;
-		}
-	}
-}
-
-std::string dc::Module::getControlInputDescription(size_t index) const
-{
-	if (index < _controlInputs.size())
-	{
-		return _controlInputs[index]->description;
-	}
-	return "";
-}
-
-std::string dc::Module::getControlOutputDescription(size_t index) const
-{
-	if (index < _controlOutputs.size())
-	{
-		return _controlOutputs[index]->description;
-	}
-	return "";
-}
-
-bool dc::Module::connectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx)
-{
-	if (nullptr == from || nullptr == to
-		|| fromIdx >= from->getNumControlOutputs() || toIdx >= to->getNumControlInputs())
-	{
-		return false;
-	}
-
-	auto& cIn = to->_controlInputs[toIdx];
-	auto& targetCOut = from->_controlOutputs[fromIdx];
-
-	// make sure the types match
-	if ((cIn->typeFlags & targetCOut->typeFlags) == 0)
-	{
-		return false;
-	}
-	
-	// check for duplicates
-	for (auto& existingOut : cIn->connections)
-	{
-		if (auto eoPtr = existingOut.lock())
-		{
-			if (eoPtr.get() == targetCOut.get())
-			{
-				return false;
-			}
-		}
-	}
-
-	// TODO: check for loops, even though we technically handle those ok now
-
-	cIn->connections.emplace_back(targetCOut);
-
-	return false;
-}
-
-void dc::Module::disconnectControl(Module* from, Module* to)
-{
-	if (nullptr == from || nullptr == to)
-	{
-		return;
-	}
-
-	for (auto& cIn : to->_controlInputs)
-	{
-		size_t cOutIdx = 0;
-		while (cOutIdx < cIn->connections.size())
-		{
-			const auto cOut = cIn->connections[cOutIdx].lock();
-
-			// go ahead and delete dead connections
-			if (!cOut)
-			{
-				cIn->connections.erase(cIn->connections.begin() + cOutIdx);
-				continue;
-			}
-
-			if (&cOut->parent == from)
-			{
-				cIn->connections.erase(cIn->connections.begin() + cOutIdx);
-				continue;
-			}
-
-			++cOutIdx;
-		}
-	}
-}
-
-void dc::Module::disconnectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx)
-{
-	if (nullptr == from || nullptr == to
-		|| fromIdx >= from->getNumControlOutputs() || toIdx >= to->getNumControlInputs())
-	{
-		return;
-	}
-
-	size_t cOutIdx = 0;
-	auto& cIn = to->_controlInputs[toIdx];
-	auto& cOut = from->_controlOutputs[fromIdx];
-	while (cOutIdx < cIn->connections.size())
-	{
-		const auto existingOut = cIn->connections[cOutIdx].lock();
-		if (existingOut && existingOut.get() == cOut.get())
-		{
-			cIn->connections.erase(cIn->connections.begin() + cOutIdx);
-			continue;
-		}
-		++cOutIdx;
-	}
-}
-
-void dc::Module::disconnectControl()
-{
-	for (auto& cIn : _controlInputs)
-	{
-		cIn->connections.clear();
-	}
-}
-
-void dc::Module::removeDeadControlConnections()
-{
-	for (auto& cIn : _controlInputs)
-	{
-		for (size_t oIdx = 0; oIdx < cIn->connections.size();)
-		{
-			if (cIn->connections[oIdx].expired())
-			{
-				cIn->connections.erase(cIn->connections.begin() + oIdx);
-				continue;
-			}
-			++oIdx;
-		}
-	}
-}
-
-dc::ModuleParam* dc::Module::getParam(size_t index)
+dc::ModuleParam* dc::Module::getParamAt(size_t index)
 {
 	if (index < _params.size())
 	{
-		return _params[index].get();
+		return &_params[index];
 	}
 	return nullptr;
 }
 
-dc::ModuleParam* dc::Module::getParam(const std::string& id)
+dc::ModuleParam* dc::Module::getParamById(const std::string& id)
 {
-	for (size_t i = 0; i < _params.size(); ++i)
+	for (auto& p : _params)
 	{
-		if (_params[i]->getId() == id)
+		if (p.getId() == id)
 		{
-			return _params[i].get();
+			return &p;
 		}
 	}
 	return nullptr;
 }
 
-void dc::Module::addControlInput(std::string description, ControlMessage::Type typeFlags)
+void dc::Module::addAudioIo(bool isInput)
 {
-	const size_t idx = _controlInputs.size();
-	_controlInputs.emplace_back(new ControlInput(*this, idx, typeFlags));
-	_controlInputs[idx]->description = description;
-	refreshControlBuffers();
-}
-
-void dc::Module::removeControlInput(size_t index)
-{
-	if (index < _controlInputs.size())
+	if (isInput)
 	{
-		_controlInputs.erase(_controlInputs.begin() + index);
+		_audioInputs.emplace_back("audio");
 	}
-}
-
-void dc::Module::addControlOutput(std::string description, ControlMessage::Type typeFlags)
-{
-	const size_t idx = _controlOutputs.size();
-	_controlOutputs.emplace_back(new ControlOutput(*this, idx, typeFlags));
-	_controlOutputs[idx]->description = description;
-	refreshControlBuffers();
-}
-
-void dc::Module::removeControlOutput(size_t index)
-{
-	if (index < _controlOutputs.size())
+	else
 	{
-		_controlOutputs.erase(_controlOutputs.begin() + index);
+		_audioOutputs.emplace_back("audio");
 	}
+	refreshAudioBuffer();
+	audioIoCountChanged();
 }
 
-void dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range, bool serializable,
-	bool hasControlInput)
+void dc::Module::removeAudioIo(size_t index, bool isInput)
+{
+	if (isInput)
+	{
+		if (index < _audioInputs.size())
+		{
+			_audioInputs.erase(_audioInputs.begin() + index);
+		}
+	}
+	else
+	{
+		if (index < _audioOutputs.size())
+		{
+			_audioOutputs.erase(_audioOutputs.begin() + index);
+		}
+	}
+	refreshAudioBuffer();
+	audioIoCountChanged();
+}
+
+void dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
+{
+	if (isInput)
+	{
+		_controlInputs.emplace_back("control", typeFlags);
+	}
+	else
+	{
+		_controlOutputs.emplace_back("control", typeFlags);
+	}
+	refreshControlBuffer();
+	controlIoCountChanged();
+}
+
+void dc::Module::removeControlIo(size_t index, bool isInput)
+{
+	if (isInput)
+	{
+		if (index < _controlInputs.size())
+		{
+			_controlInputs.erase(_controlInputs.begin() + index);
+		}
+	}
+	else
+	{
+		if (index < _controlOutputs.size())
+		{
+			_controlOutputs.erase(_controlOutputs.begin() + index);
+		}
+	}
+	refreshControlBuffer();
+	controlIoCountChanged();
+}
+
+void dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
+	bool serializable, bool hasControlInput)
 {
 	int controlInputIdx = -1;
 	if (hasControlInput)
 	{
 		controlInputIdx = static_cast<int>(_controlInputs.size());
-		addControlInput(displayName, ControlMessage::Type::Float);
+		addControlIo(true, ControlMessage::Float);
 	}
-	_params.emplace_back(new ModuleParam(id, displayName, range, serializable, controlInputIdx));
+	_params.emplace_back(id, displayName, range, serializable, controlInputIdx);
 }
 
-void dc::Module::process(size_t rev)
+
+void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 {
-	// check revision, if already processed, return
 	if (rev == _rev)
 	{
 		return;
@@ -398,81 +113,225 @@ void dc::Module::process(size_t rev)
 	_rev = rev;
 
 	// process upstream modules
+	if (!_controlInputs.empty())
 	{
-		removeDeadAudioConnections();
-		removeDeadControlConnections();
-
-		for (auto& aIn : _audioInputs)
+		for (auto& in : _controlInputs)
 		{
-			for (auto& connection : aIn->connections)
+			for (auto& c : in.connections)
 			{
-				if (auto cPtr = connection.lock())
+				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
-					cPtr->parent.process(rev);
-				}
-			}
-		}
-		for (auto& cIn : _controlInputs)
-		{
-			for (auto& connection : cIn->connections)
-			{
-				if (auto cPtr = connection.lock())
-				{
-					cPtr->parent.process(rev);
+					upstream->pullFromUpstream(parentGraph, rev);
 				}
 			}
 		}
 	}
 
-	// pull in control data
+	if (!_audioInputs.empty())
+	{
+		for (auto& in : _audioInputs)
+		{
+			for (auto& c : in.connections)
+			{
+				if (auto* upstream = parentGraph.getModuleById(c.fromId))
+				{
+					upstream->pullFromUpstream(parentGraph, rev);
+				}
+			}
+		}
+	}
+
+	// pull in control and audio
+	if (!_controlInputs.empty())
 	{
 		_controlBuffer.clear();
 
-		for (auto& cIn : _controlInputs)
+		for (auto& in : _controlInputs)
 		{
-			for (auto& connection : cIn->connections)
+			for (auto& c : in.connections)
 			{
-				if (auto cPtr = connection.lock())
+				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
-					_controlBuffer.merge(cPtr->parent.getControlOutputBuffer(), cPtr->index, cIn->index);
+					// just in case there's a dead connection
+					if (c.fromIdx >= upstream->getNumControlOutputs())
+					{
+						continue;
+					}
+					_controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
 				}
 			}
 		}
 	}
 
-	// pull in audio data
+	if (!_audioInputs.empty())
 	{
 		_audioBuffer.zero();
 
-		for (auto& aIn : _audioInputs)
+		for (auto& in : _audioInputs)
 		{
-			for (auto& connection : aIn->connections)
+			for (auto& c : in.connections)
 			{
-				if (auto cPtr = connection.lock())
+				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
-					_audioBuffer.addFrom(cPtr->parent.getAudioOutputBuffer(), cPtr->index, aIn->index);
+					if (c.fromIdx >= upstream->getNumAudioOutputs())
+					{
+						continue;
+					}
+					_audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
 				}
 			}
 		}
 	}
 
-	// process the control + audio
-	onProcess();
+	// run this module's process
+	process();
 }
 
-void dc::Module::pushControlMessage(ControlMessage message, size_t outputIndex)
+void dc::Module::setBlockSizeInternal(size_t blockSize)
 {
-	_controlBuffer.insert(message, outputIndex);
+	_blockSize = blockSize;
+	refreshAudioBuffer();
+	blockSizeChanged();
 }
 
-void dc::Module::refreshAudioBuffers(size_t numSamples)
+void dc::Module::setSampleRateInternal(double sampleRate)
 {
-	_audioBuffer.resize(numSamples, std::max(_audioInputs.size(), _audioOutputs.size()));
-	onRefreshAudioBuffers();
+	_sampleRate = sampleRate;
+	sampleRateChanged();
 }
 
-void dc::Module::refreshControlBuffers()
+void dc::Module::refreshAudioBuffer()
 {
-	_controlBuffer.setNumChannels(std::max(_controlInputs.size(), _controlOutputs.size()));
-	onRefreshControlBuffers();
+	const size_t numChannels = std::max(_audioInputs.size(), _audioOutputs.size());
+	_audioBuffer.resize(_blockSize, numChannels);
+}
+
+void dc::Module::refreshControlBuffer()
+{
+	const size_t numChannels = std::max(_controlInputs.size(), _controlOutputs.size());
+	_controlBuffer.setNumChannels(numChannels);
+}
+
+bool dc::Module::addConnectionInternal(const Connection& connection)
+{
+	const auto type = connection.type;
+	const auto fromId = connection.fromId;
+	const auto toId = connection.toId;
+
+	if (fromId == _id || toId == _id)
+	{
+		const bool isInput = toId == _id;
+		const auto idx = isInput ? connection.toIdx : connection.fromIdx;
+
+		switch (type)
+		{
+		case Connection::Audio:
+			if (isInput)
+			{
+				if (idx < _audioInputs.size())
+				{
+					_audioInputs[idx].connections.push_back(connection);
+					return true;
+				}
+			}
+			else
+			{
+				if (idx < _audioOutputs.size())
+				{
+					_audioOutputs[idx].connections.push_back(connection);
+					return true;
+				}
+			}
+			break;
+		case Connection::Control:
+			if (isInput)
+			{
+				if (idx < _controlInputs.size())
+				{
+					_controlInputs[idx].connections.push_back(connection);
+					return true;
+				}
+			}
+			else
+			{
+				if (idx < _controlOutputs.size())
+				{
+					_controlOutputs[idx].connections.push_back(connection);
+					return true;
+				}
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	return false;
+}
+
+void dc::Module::Io::removeConnection(const Connection& c)
+{
+	size_t i = 0;
+	while (i < connections.size())
+	{
+		if (connections[i] == c)
+		{
+			connections.erase(connections.begin() + i);
+		}
+		else
+		{
+			++i;
+		}
+	}
+}
+
+void dc::Module::removeConnectionInternal(const Connection& connection)
+{
+	const auto type = connection.type;
+	const auto fromId = connection.fromId;
+	const auto toId = connection.toId;
+
+	if (fromId == _id || toId == _id)
+	{
+		const bool isInput = toId == _id;
+		const auto idx = isInput ? connection.toIdx : connection.fromIdx;
+
+		switch (type)
+		{
+		case Connection::Audio:
+			if (isInput)
+			{
+				if (idx < _audioInputs.size())
+				{
+					_audioInputs[idx].removeConnection(connection);
+				}
+			}
+			else
+			{
+				if (idx < _audioOutputs.size())
+				{
+					_audioOutputs[idx].removeConnection(connection);
+				}
+			}
+			break;
+		case Connection::Control:
+			if (isInput)
+			{
+				if (idx < _controlInputs.size())
+				{
+					_controlInputs[idx].removeConnection(connection);
+				}
+			}
+			else
+			{
+				if (idx < _controlOutputs.size())
+				{
+					_controlOutputs[idx].removeConnection(connection);
+				}
+			}
+			break;
+		default: 
+			break;
+		}
+	}
 }

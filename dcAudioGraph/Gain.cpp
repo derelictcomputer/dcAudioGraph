@@ -3,11 +3,26 @@
 dc::Gain::Gain()
 {
 	addParam("gain", "Gain", ParamRange(0.0f, 2.0f, 0.0f), true, true);
-	getParam("gain")->setRaw(1.0f);
+	getParamById("gain")->setRaw(1.0f);
 }
 
-void dc::Gain::onProcess()
+void dc::Gain::setNumChannels(size_t numChannels)
 {
-	const auto gain = getParam("gain")->getRaw();
+	while (numChannels < getNumAudioInputs())
+	{
+		const size_t idx = getNumAudioInputs() - 1;
+		removeAudioIo(idx, true);
+		removeAudioIo(idx, false);
+	}
+	while (numChannels > getNumAudioInputs())
+	{
+		addAudioIo(true);
+		addAudioIo(false);
+	}
+}
+
+void dc::Gain::process()
+{
+	const auto gain = getParamAt(0)->getRaw();
 	_audioBuffer.applyGain(gain);
 }

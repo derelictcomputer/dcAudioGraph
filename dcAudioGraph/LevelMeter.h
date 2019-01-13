@@ -16,9 +16,10 @@ public:
 
 	float getLevel(size_t channel);
 
+	void setNumChannels(size_t numChannels);
+
 protected:
-	void onProcess() override;
-	void onRefreshAudioBuffers() override;
+	void process() override;
 
 	std::vector<float> _levels;
 };

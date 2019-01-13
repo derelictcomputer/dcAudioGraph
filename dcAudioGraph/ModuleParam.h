@@ -57,6 +57,9 @@ public:
 	ModuleParam(std::string id, std::string displayName, const ParamRange& range,
 		bool serializable = false, int controlInputIndex = -1);
 
+	ModuleParam(const ModuleParam& other);
+	ModuleParam& operator=(const ModuleParam& other);
+
 	std::string getId() const { return _id; }
 	std::string getDisplayName() const { return _displayName; }
 
