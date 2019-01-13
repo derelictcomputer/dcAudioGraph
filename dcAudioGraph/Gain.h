@@ -14,6 +14,6 @@ public:
 	Gain();
 
 protected:
-	void onProcess() override;
+	void process() override;
 };
 }

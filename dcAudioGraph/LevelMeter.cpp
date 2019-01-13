@@ -9,7 +9,22 @@ float dc::LevelMeter::getLevel(size_t channel)
 	return 0.0f;
 }
 
-void dc::LevelMeter::onProcess()
+void dc::LevelMeter::setNumChannels(size_t numChannels)
+{
+	while (numChannels < getNumAudioInputs())
+	{
+		const size_t idx = getNumAudioInputs() - 1;
+		removeAudioIo(idx, true);
+		removeAudioIo(idx, false);
+	}
+	while (numChannels > getNumAudioInputs())
+	{
+		addAudioIo(true);
+		addAudioIo(false);
+	}
+}
+
+void dc::LevelMeter::process()
 {
 	for (size_t cIdx = 0; cIdx < _audioBuffer.getNumChannels(); ++cIdx)
 	{
@@ -24,7 +39,7 @@ void dc::LevelMeter::onProcess()
 	}
 }
 
-void dc::LevelMeter::onRefreshAudioBuffers()
+void dc::LevelMeter::audioIoCountChanged()
 {
 	const auto numChannels = _audioBuffer.getNumChannels();
 	while (numChannels < _levels.size())

@@ -1,127 +1,145 @@
-#include <string>
 #include "Graph.h"
+#include <algorithm>
 
-void dc::GraphInputModule::setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer)
+bool dc::Graph::Connection::operator==(const Connection& other) const
 {
-	_inputAudioBuffer.zero();
-	_inputAudioBuffer.copyFrom(inputBuffer, false);
-	_inputControlBuffer.clear();
-	_inputControlBuffer.merge(controlBuffer);
+	return fromId == other.fromId &&
+		fromIdx == other.fromIdx &&
+		toId == other.toId &&
+		toIdx == other.toIdx &&
+		type == other.type;
 }
 
-void dc::GraphInputModule::onProcess()
+dc::Graph::Graph()
 {
-	_audioBuffer.copyFrom(_inputAudioBuffer, false);
-	_controlBuffer.merge(_inputControlBuffer);
 }
 
-void dc::GraphInputModule::onRefreshAudioBuffers()
+void dc::Graph::setBlockSize(size_t blockSize)
 {
-	_inputAudioBuffer.resize(_audioBuffer.getNumSamples(), _audioBuffer.getNumChannels());
-}
-
-void dc::GraphInputModule::onRefreshControlBuffers()
-{
-	_inputControlBuffer.setNumChannels(_controlBuffer.getNumChannels());
-}
-
-void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool isTopLevel)
-{
-	// copy the input buffers to the graph input
-	_inputModule.setInputData(audioBuffer, controlBuffer);
-
-	// process the graph
-	_outputModule.process(isTopLevel ? ++_rev : _rev);
-
-	// copy the output
-	audioBuffer.zero();
-	audioBuffer.copyFrom(_outputModule.getAudioOutputBuffer(), false);
-	controlBuffer.clear();
-	controlBuffer.merge(_outputModule.getControlOutputBuffer());
-}
-
-void dc::Graph::setNumControlInputs(size_t numInputs)
-{
-	while (numInputs < getNumControlInputs())
+	setBlockSizeInternal(blockSize);
+	_input.setBlockSizeInternal(blockSize);
+	_output.setBlockSizeInternal(blockSize);
+	for (auto& m : _modules)
 	{
-		removeControlInput(getNumControlInputs() - 1);
-	}
-	while (numInputs > getNumControlInputs())
-	{
-		const std::string description = "control " + std::to_string(getNumControlInputs());
-		const auto typeFlags = ControlMessage::Type::All;
-		addControlInput(description, typeFlags);
+		m->setBlockSizeInternal(blockSize);
 	}
 }
 
-void dc::Graph::setNumControlOutputs(size_t numOutputs)
+void dc::Graph::setSampleRate(double sampleRate)
 {
-	while (numOutputs < getNumControlOutputs())
+	setSampleRateInternal(sampleRate);
+	_input.setSampleRateInternal(sampleRate);
+	_output.setSampleRateInternal(sampleRate);
+	for (auto& m : _modules)
 	{
-		removeControlOutput(getNumControlOutputs() - 1);
+		m->setSampleRateInternal(sampleRate);
 	}
-	while (numOutputs > getNumControlOutputs())
+}
+
+void dc::Graph::setNumAudioInputs(size_t count)
+{
+	while (count < getNumAudioInputs())
 	{
-		const std::string description = "control" + std::to_string(getNumControlOutputs());
-		const auto typeFlags = ControlMessage::Type::All;
-		addControlOutput(description, typeFlags);
+		removeAudioIo(getNumAudioInputs() - 1, true);
+	}
+	while (count > getNumAudioInputs())
+	{
+		addAudioIo(true);
+	}
+}
+
+void dc::Graph::setNumAudioOutputs(size_t count)
+{
+	while (count < getNumAudioOutputs())
+	{
+		removeAudioIo(getNumAudioOutputs() - 1, false);
+	}
+	while (count > getNumAudioOutputs())
+	{
+		addAudioIo(false);
+	}
+}
+
+void dc::Graph::setNumControlInputs(size_t count)
+{
+	while (count < getNumControlInputs())
+	{
+		removeControlIo(getNumControlInputs() - 1, true);
+	}
+	while (count > getNumControlInputs())
+	{
+		addControlIo(true, ControlMessage::All);
+	}
+}
+
+void dc::Graph::setNumControlOutputs(size_t count)
+{
+	while (count < getNumControlOutputs())
+	{
+		removeControlIo(getNumControlOutputs() - 1, false);
+	}
+	while (count > getNumControlOutputs())
+	{
+		addControlIo(false, ControlMessage::All);
+	}
+
+}
+
+void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
+{
+	// copy the input to the input module
+	{
+		_input._audioBuffer.copyFrom(audioBuffer, false);
+		_input._controlBuffer.clear();
+		_input._controlBuffer.merge(controlBuffer);
+	}
+
+	// pull through audio and control
+	{
+		_output.pullFromUpstream(*this, incrementRev ? ++_rev : _rev);
+	}
+
+	// copy the output from the output module
+	{
+		audioBuffer.copyFrom(_output._audioBuffer, false);
+		controlBuffer.clear();
+		controlBuffer.merge(_output._controlBuffer);
 	}
 }
 
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 {
-	if (nullptr != module)
+	if (nullptr == module)
 	{
-		const size_t id = module->getId();
-
-		// disallow adding a module twice to this graph
-		// TODO: disallow a module being added in more than one place
-		for (auto& m : _modules)
-		{
-			if (m->getId() == id)
-			{
-				return 0;
-			}
-		}
-
-		module->setBufferSize(_audioBuffer.getNumChannels());
-		module->setSampleRate(_sampleRate);
-		_modules.push_back(std::move(module));
-		return id;
+		return 0;
 	}
-	return 0;
+
+	module->setBlockSizeInternal(_blockSize);
+	module->setSampleRateInternal(_sampleRate);
+	const size_t id = _nextModuleId++;
+	module->_id = id;
+	_modules.push_back(std::move(module));
+	return id;
 }
 
 dc::Module* dc::Graph::getModuleAt(size_t index)
 {
-	if (index >= _modules.size())
+	if (index < _modules.size())
 	{
-		return nullptr;
+		return _modules[index].get();
 	}
-
-	return _modules[index].get();
+	return nullptr;
 }
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
-	if (_inputModule.getId() == id)
-	{
-		return &_inputModule;
-	}
-
-	if (_outputModule.getId() == id)
-	{
-		return &_outputModule;
-	}
-
 	for (auto& m : _modules)
 	{
-		if (m->getId() == id)
+		if (m->_id == id)
 		{
 			return m.get();
 		}
 	}
-
 	return nullptr;
 }
 
@@ -129,6 +147,7 @@ void dc::Graph::removeModuleAt(size_t index)
 {
 	if (index < _modules.size())
 	{
+		disconnectModule(_modules[index]->_id);
 		_modules.erase(_modules.begin() + index);
 	}
 }
@@ -137,74 +156,171 @@ void dc::Graph::removeModuleById(size_t id)
 {
 	for (size_t i = 0; i < _modules.size(); ++i)
 	{
-		if (_modules[i]->getId() == id)
+		if (_modules[i]->_id == id)
 		{
-			_modules.erase(_modules.begin() + i);
+			removeModuleAt(i);
 			return;
 		}
 	}
 }
 
-void dc::Graph::clear()
+bool dc::Graph::addConnection(const Connection& connection)
 {
-	_modules.clear();
-	// TODO: decide whether we should mess with the graph I/O
+	if (connectionExists(connection))
+	{
+		return false;
+	}
+
+	if (connectionCreatesLoop(connection))
+	{
+		return false;
+	}
+
+	Module* from = nullptr;
+	Module* to = nullptr;
+
+	if (!getModulesForConnection(connection, from, to))
+	{
+		return false;
+	}
+
+	if (from->addConnectionInternal(connection))
+	{
+		if (to->addConnectionInternal(connection))
+		{
+			_allConnections.push_back(connection);
+			return true;
+		}
+		else
+		{
+			from->removeConnectionInternal(connection);
+		}
+	}
+
+	return false;
 }
 
-void dc::Graph::onProcess()
+void dc::Graph::removeConnection(const Connection& connection)
+{
+	if (!connectionExists(connection))
+	{
+		return;
+	}
+
+	for (auto it = _allConnections.begin(); it != _allConnections.end(); ++it)
+	{
+		if (*it == connection)
+		{
+			_allConnections.erase(it);
+			break;
+		}
+	}
+
+	Module* from = nullptr;
+	Module* to = nullptr;
+
+	if (getModulesForConnection(connection, from, to))
+	{
+		from->removeConnectionInternal(connection);
+		to->removeConnectionInternal(connection);
+	}
+}
+
+void dc::Graph::disconnectModule(size_t id)
+{
+	if (auto* m = getModuleById(id))
+	{
+		size_t i = 0;
+		while (i < _allConnections.size())
+		{
+			auto& c = _allConnections[i];
+			if (c.fromId == id || c.toId == id)
+			{
+				removeConnection(c);
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+}
+
+void dc::Graph::process()
 {
 	process(_audioBuffer, _controlBuffer, false);
 }
 
-void dc::Graph::onRefreshAudioBuffers()
+bool dc::Graph::connectionExists(const Connection& connection)
 {
-	const auto bufferSize = _audioBuffer.getNumSamples();
-	const auto numChannels = _audioBuffer.getNumChannels();
-
-	_inputModule.setBufferSize(bufferSize);
-	_inputModule.setSampleRate(_sampleRate);
-	_inputModule.setNumAudioOutputs(numChannels);
-
-	_outputModule.setBufferSize(bufferSize);
-	_outputModule.setSampleRate(_sampleRate);
-	_outputModule.setNumAudioInputs(numChannels);
-	_outputModule.setNumAudioOutputs(numChannels);
-
-	for (auto& m : _modules)
+	for (auto& c : _allConnections)
 	{
-		m->setBufferSize(bufferSize);
-		m->setSampleRate(_sampleRate);
+		if (c == connection)
+		{
+			return true;
+		}
 	}
+	return false;
 }
 
-void dc::Graph::onRefreshControlBuffers()
+bool dc::Graph::getModulesForConnection(const Connection& connection, Module* from, Module* to)
 {
+	from = getModuleById(connection.fromId);
+	to = getModuleById(connection.toId);
+	return nullptr != from && nullptr != to;
+}
+
+bool dc::Graph::connectionCreatesLoop(const Connection& connection)
+{
+	Module* from = nullptr;
+	Module* to = nullptr;
+
+	if (!getModulesForConnection(connection, from, to))
 	{
-		const auto numChannels = getNumControlInputs();
-		while (numChannels < _inputModule.getNumControlOutputs())
+		return false;
+	}
+
+	return moduleIsInputTo(to, from);
+}
+
+bool dc::Graph::moduleIsInputTo(Module* from, Module* to)
+{
+	if (from == to)
+	{
+		return true;
+	}
+
+	if (nullptr == from || nullptr == to)
+	{
+		return false;
+	}
+
+	for (auto& in : to->_audioInputs)
+	{
+		for (auto& c : in.connections)
 		{
-			_inputModule.removeControlOutput(_inputModule.getNumControlOutputs() - 1);
-		}
-		while (numChannels > _inputModule.getNumControlOutputs())
-		{
-			const std::string description = "control " + std::to_string(_inputModule.getNumControlOutputs());
-			const auto typeFlags = ControlMessage::Type::All;
-			_inputModule.addControlOutput(description, typeFlags);
+			if (auto* m = getModuleById(c.fromId))
+			{
+				if (moduleIsInputTo(from, m))
+				{
+					return true;
+				}
+			}
 		}
 	}
+	for (auto& in : to->_controlInputs)
 	{
-		const auto numChannels = getNumControlInputs();
-		while (numChannels < _outputModule.getNumControlOutputs())
+		for (auto& c : in.connections)
 		{
-			_outputModule.removeControlInput(_outputModule.getNumControlInputs() - 1);
-			_outputModule.removeControlOutput(_outputModule.getNumControlOutputs() - 1);
-		}
-		while (numChannels > _outputModule.getNumControlOutputs())
-		{
-			const std::string description = "control " + std::to_string(_outputModule.getNumControlOutputs());
-			const auto typeFlags = ControlMessage::Type::All;
-			_outputModule.addControlInput(description, typeFlags);
-			_outputModule.addControlOutput(description, typeFlags);
+			if (auto* m = getModuleById(c.fromId))
+			{
+				if (moduleIsInputTo(from, m))
+				{
+					return true;
+				}
+			}
 		}
 	}
+
+	return false;
 }

@@ -6,66 +6,66 @@
 
 #pragma once
 
+#include <memory>
 #include "Module.h"
 
 namespace dc
 {
-// a module for output from a graph
-// Note: this module is really just a passthrough
+class GraphInputModule final : public Module
+{
+protected:
+	void process() override {}
+};
+
 class GraphOutputModule final : public Module
 {
 protected:
-	void onProcess() override {}
+	void process() override {}
 };
 
-// a module for input into a graph
-class GraphInputModule final : public Module
+class Graph final : public Module
 {
 public:
-	void setInputData(const AudioBuffer& inputBuffer, ControlBuffer& controlBuffer);
+	Graph();
 
-protected:
-	void onProcess() override;
-	void onRefreshAudioBuffers() override;
-	void onRefreshControlBuffers() override;
+	void setBlockSize(size_t blockSize);
+	void setSampleRate(double sampleRate);
 
-private:
-	AudioBuffer _inputAudioBuffer;
-	ControlBuffer _inputControlBuffer;
-};
+	void setNumAudioInputs(size_t count);
+	void setNumAudioOutputs(size_t count);
+	void setNumControlInputs(size_t count);
+	void setNumControlOutputs(size_t count);
 
-class Graph : public Module
-{
-public:
-	Graph() = default;
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
 
-	// Call this from your audio callback for the main graph to process all of your modules.
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool isTopLevel = true);
-
-	void setNumControlInputs(size_t numInputs);
-	void setNumControlOutputs(size_t numOutputs);
+	Module* getInputModule() { return &_input; }
+	Module* getOutputModule() { return &_output; }
 
 	size_t addModule(std::unique_ptr<Module> module);
 	size_t getNumModules() const { return _modules.size(); }
-
-	Module* getInputModule() { return &_inputModule; }
-	Module* getOutputModule() { return &_outputModule; }
 	Module* getModuleAt(size_t index);
 	Module* getModuleById(size_t id);
-
 	void removeModuleAt(size_t index);
 	void removeModuleById(size_t id);
-	void clear();
+
+	bool addConnection(const Connection& connection);
+	void removeConnection(const Connection& connection);
+	void disconnectModule(size_t id);
 
 protected:
-	void onProcess() override;
-	void onRefreshAudioBuffers() override;
-	void onRefreshControlBuffers() override;
+	void process() override;
 
 private:
-	// serializable
-	GraphInputModule _inputModule;
-	GraphOutputModule _outputModule;
+	bool connectionExists(const Connection& connection);
+	bool getModulesForConnection(const Connection& connection, Module* from, Module* to);
+	bool connectionCreatesLoop(const Connection& connection);
+	bool moduleIsInputTo(Module* from, Module* to);
+
+	GraphInputModule _input;
+	GraphOutputModule _output;
 	std::vector<std::unique_ptr<Module>> _modules;
+	std::vector<Connection> _allConnections;
+
+	size_t _nextModuleId = 1;
 };
 }

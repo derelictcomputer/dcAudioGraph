@@ -14,7 +14,7 @@
  */
 
 #pragma once
-#include <memory>
+#include <utility>
 #include <vector>
 #include "AudioBuffer.h"
 #include "ControlBuffer.h"
@@ -25,142 +25,94 @@ namespace dc
 class Module
 {
 public:
-	// let graphs reach into here so they can do their work
+	struct Connection
+	{
+		enum Type
+		{
+			Audio = 0,
+			Control
+		};
+
+		bool operator==(const Connection& other) const;
+		bool operator!=(const Connection& other) const { return !(*this == other); }
+
+		size_t fromId;
+		size_t fromIdx;
+		size_t toId;
+		size_t toIdx;
+		Type type;
+	};
+
+	// let the parent graph reach in here
 	friend class Graph;
 
-	Module();
-
-	// Prevent copy/move
-	// TODO: This is probably going to be a necessary feature for graph editors
-	Module(const Module& other) = delete;
-	Module& operator=(const Module& other) = delete;
-	Module(Module&& other) = delete;
-	Module& operator=(Module&& other) = delete;
-
+	Module() = default;
 	virtual ~Module() = default;
 
-	// a unique id for this Module instance *DURING THIS RUN ONLY*
-	// so, don't expect it to persist between sessions
-	// this is mostly helpful for referring to a specific module in a graph at runtime
 	size_t getId() const { return _id; }
 
-	// Audio I/O
-	void setBufferSize(size_t bufferSize);
-	void setSampleRate(double sampleRate) { _sampleRate = sampleRate; }
+	size_t getBlockSize() const { return _blockSize; }
+	double getSampleRate() const { return _sampleRate; }
 
 	size_t getNumAudioInputs() const { return _audioInputs.size(); }
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
-	void setNumAudioInputs(size_t numInputs);
-	void setNumAudioOutputs(size_t numOutputs);
-
-	std::string getAudioInputDescription(size_t index) const;
-	std::string getAudioOutputDescription(size_t index) const;
-
-	static bool connectAudio(Module* from, Module* to);
-	static bool connectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
-	static void disconnectAudio(Module* from, Module* to);
-	static void disconnectAudio(Module* from, size_t fromIdx, Module* to, size_t toIdx);
-	void disconnectAudio();
-	void removeDeadAudioConnections();
-
-	// Control I/O
 	size_t getNumControlInputs() const { return _controlInputs.size(); }
 	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
 
-	std::string getControlInputDescription(size_t index) const;
-	std::string getControlOutputDescription(size_t index) const;
-
-	static bool connectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx);
-	static void disconnectControl(Module* from, Module* to);
-	static void disconnectControl(Module* from, size_t fromIdx, Module* to, size_t toIdx);
-	void disconnectControl();
-	void removeDeadControlConnections();
-
-	// Parameters
-	size_t getNumParameters() const { return _params.size(); }
-	ModuleParam* getParam(size_t index);
-	ModuleParam* getParam(const std::string& id);
-
 protected:
-	// Control I/O
-	void addControlInput(std::string description, ControlMessage::Type typeFlags);
-	void removeControlInput(size_t index);
-	void addControlOutput(std::string description, ControlMessage::Type typeFlags);
-	void removeControlOutput(size_t index);
+	void addAudioIo(bool isInput);
+	void removeAudioIo(size_t index, bool isInput);
+	void addControlIo(bool isInput, ControlMessage::Type typeFlags);
+	void removeControlIo(size_t index, bool isInput);
 
-	// Parameters
-	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
-		bool serializable = false, bool hasControlInput = false);
+	// implement this to do something to audio or control
+	virtual void process() = 0;
 
-	// Processing
-	void process(size_t rev);
-	AudioBuffer& getAudioOutputBuffer() { return _audioBuffer; }
-	ControlBuffer& getControlOutputBuffer() { return _controlBuffer; }
-	void pushControlMessage(ControlMessage message, size_t outputIndex);
+	// override these if you need to update your module for changes in size
+	virtual void blockSizeChanged() {}
+	virtual void sampleRateChanged() {}
+	virtual void audioIoCountChanged() {}
+	virtual void controlIoCountChanged() {}
 
-	// override these in your module to actually do things
-	virtual void onProcess() = 0;
-	virtual void onRefreshAudioBuffers() {}
-	virtual void onRefreshControlBuffers() {}
-
-	double _sampleRate = 0;
 	AudioBuffer _audioBuffer;
 	ControlBuffer _controlBuffer;
 
 private:
-	struct ModuleIo
+	struct Io
 	{
-		ModuleIo(Module& parent, size_t index) : parent(parent), index(index) {}
+		Io(std::string description) : description(std::move(description)) {}
 
-		std::string description = "";
-		Module& parent;
-		size_t index;
+		void removeConnection(const Connection& c);
+
+		std::string description;
+		std::vector<Connection> connections;
 	};
 
-	using AudioOutput = ModuleIo;
-
-	struct AudioInput final : ModuleIo
+	struct ControlIo : Io
 	{
-		AudioInput(Module& parent, size_t index) : ModuleIo(parent, index) {}
-
-		std::vector<std::weak_ptr<AudioOutput>> connections;
-	};
-
-	struct ControlOutput final : ModuleIo
-	{
-		ControlOutput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
-		{
-			this->typeFlags = typeFlags;
-		}
+		ControlIo(std::string description, ControlMessage::Type typeFlags) : Io(description), typeFlags(typeFlags) {}
 
 		ControlMessage::Type typeFlags;
 	};
 
-	struct ControlInput final : ModuleIo
-	{
-		ControlInput(Module& parent, size_t index, ControlMessage::Type typeFlags) : ModuleIo(parent, index)
-		{
-			this->typeFlags = typeFlags;
-		}
+	void pullFromUpstream(Graph& parentGraph, size_t rev);
 
-		ControlMessage::Type typeFlags;
-		std::vector<std::weak_ptr<ControlOutput>> connections;
-	};
+	void setBlockSizeInternal(size_t blockSize);
+	void setSampleRateInternal(double sampleRate);
+	void refreshAudioBuffer();
+	void refreshControlBuffer();
 
-	void refreshAudioBuffers(size_t numSamples);
-	void refreshControlBuffers();
+	bool addConnectionInternal(const Connection& connection);
+	void removeConnectionInternal(const Connection& connection);
 
-	std::vector<std::unique_ptr<AudioInput>> _audioInputs;
-	std::vector<std::shared_ptr<AudioOutput>> _audioOutputs;
-	std::vector<std::unique_ptr<ControlInput>> _controlInputs;
-	std::vector<std::shared_ptr<ControlOutput>> _controlOutputs;
-	std::vector<std::unique_ptr<ModuleParam>> _params;
+	std::vector<Io> _audioInputs;
+	std::vector<Io> _audioOutputs;
+	std::vector<ControlIo> _controlInputs;
+	std::vector<ControlIo> _controlOutputs;
 
-	// a unique id for this Module instance *DURING THIS RUN ONLY*
-	// so, don't expect it to persist between sessions
-	// this is mostly helpful for referring to a specific module in the graph at runtime
 	size_t _id = 0;
-	// the last graph revision
 	size_t _rev = 0;
+	size_t _blockSize = 0;
+	double _sampleRate = 0;
 };
 }

@@ -68,13 +68,19 @@ int main()
 
 	audioBuffer.resize(64, 2);
 
-    dc::Graph graph;
-	graph.setBufferSize(64);
-	graph.setSampleRate(48000);
-    graph.setNumAudioInputs(2);
-    graph.setNumAudioOutputs(2);
-    dc::Module::connectAudio(graph.getInputModule(), 0, graph.getOutputModule(), 0);
-    dc::Module::connectAudio(graph.getInputModule(), 1, graph.getOutputModule(), 1);
+	dc::Graph graph;
+	{
+		graph.setBlockSize(64);
+		graph.setSampleRate(48000);
+		graph.setNumAudioInputs(2);
+		graph.setNumAudioOutputs(2);
+		auto* in = graph.getInputModule();
+		auto inId = in->getId();
+		auto* out = graph.getOutputModule();
+		auto outId = out->getId();
+		graph.addConnection({ inId, 0, outId, 0, dc::Module::Connection::Audio });
+		graph.addConnection({ inId, 1, outId, 1, dc::Module::Connection::Audio });
+	}
 
     PaStream* stream;
     error = Pa_OpenStream(&stream, &inputParams, &outputParams, 48000, 64, 0, audioDeviceCallback, &graph);

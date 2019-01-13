@@ -8,10 +8,9 @@ using namespace dc;
 void makeBasicGraph(Graph& g, size_t numIo)
 {
 	auto lmId = g.addModule(std::make_unique<LevelMeter>());
-	auto* lm = g.getModuleById(lmId);
+	auto* lm = dynamic_cast<LevelMeter*>(g.getModuleById(lmId));
 	ASSERT_NE(lm, nullptr);
-	lm->setNumAudioInputs(numIo);
-	lm->setNumAudioOutputs(numIo);
+	lm->setNumChannels(numIo);
 
 	auto gId = g.addModule(std::make_unique<Gain>());
 	auto* gain = g.getModuleById(gId);
