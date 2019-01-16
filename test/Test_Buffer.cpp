@@ -3,6 +3,14 @@
 
 using namespace dc;
 
+TEST(AudioBuffer, CopyConstructor)
+{
+	AudioBuffer b1(1024, 16);
+	b1.fill(0.5f);
+	AudioBuffer b2(b1);
+	ASSERT_TRUE(buffersEqual(b1, b2));
+}
+
 TEST(AudioBuffer, ResizeFunctional)
 {
 	const size_t numSamples = 512;

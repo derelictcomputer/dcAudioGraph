@@ -6,6 +6,11 @@ dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
 	resize(numSamples, numChannels);
 }
 
+dc::AudioBuffer::AudioBuffer(const AudioBuffer& other) : AudioBuffer(other._numSamples, other._numChannels)
+{
+	copyFrom(other, false);
+}
+
 dc::AudioBuffer::~AudioBuffer()
 {
 	free(_data);

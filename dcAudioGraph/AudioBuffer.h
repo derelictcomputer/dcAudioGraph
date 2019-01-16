@@ -18,9 +18,7 @@ public:
 	// Note: the buffer will be filled with garbage. Clear it out before you use it.
 	AudioBuffer(size_t numSamples, size_t numChannels);
 
-	// Prevent copies and moves
-	// TODO: it should actually be straightforward to implement these, so maybe do that
-	AudioBuffer(const AudioBuffer& other) = delete;
+	AudioBuffer(const AudioBuffer& other);
 	AudioBuffer& operator=(const AudioBuffer& other) = delete;
 	AudioBuffer(AudioBuffer&& other) = delete;
 	AudioBuffer& operator=(AudioBuffer&& other) = delete;
