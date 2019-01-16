@@ -22,10 +22,12 @@
 
 namespace dc
 {
+// TODO: thread safety for resizing of I/O, buffers, and params
+
 class Module
 {
 public:
-	struct Connection
+	struct Connection final
 	{
 		enum Type
 		{
@@ -43,15 +45,48 @@ public:
 		Type type;
 	};
 
+	class Io
+	{
+	public:
+		friend class Module;
+		friend class Graph;
+
+		explicit Io(std::string description) : _description(std::move(description)) {}
+
+		std::string getDescription() const { return _description; }
+		float getScale() const { return _scale; }
+		void setScale(float scale) { _scale = scale; }
+
+	private:
+		void removeConnection(const Connection& c);
+
+		std::string _description;
+		float _scale = 1.0f;
+		std::vector<Connection> _connections;
+	};
+
+	class ControlIo final : public Io
+	{
+	public:
+		ControlIo(std::string description, ControlMessage::Type typeFlags) : Io(description), _typeFlags(typeFlags) {}
+
+		ControlMessage::Type getTypeFlags() const { return _typeFlags; }
+
+	private:
+		ControlMessage::Type _typeFlags;
+	};
+
 	// let the parent graph reach in here
 	friend class Graph;
 
 	Module() = default;
 	virtual ~Module() = default;
 
-	// TODO: allow copy/move of modules, it'll be needed for eg. editor applications
+	// TODO: allow copy of modules, it'll be needed for eg. editor applications
 	Module(const Module& other) = delete;
 	Module& operator=(const Module& other) = delete;
+
+	// disallow move, for now
 	Module(Module&& other) = delete;
 	Module& operator=(Module&& other) = delete;
 
@@ -91,23 +126,6 @@ protected:
 	ControlBuffer _controlBuffer;
 
 private:
-	struct Io
-	{
-		Io(std::string description) : description(std::move(description)) {}
-
-		void removeConnection(const Connection& c);
-
-		std::string description;
-		std::vector<Connection> connections;
-	};
-
-	struct ControlIo : Io
-	{
-		ControlIo(std::string description, ControlMessage::Type typeFlags) : Io(description), typeFlags(typeFlags) {}
-
-		ControlMessage::Type typeFlags;
-	};
-
 	void pullFromUpstream(Graph& parentGraph, size_t rev);
 
 	void setBlockSizeInternal(size_t blockSize);

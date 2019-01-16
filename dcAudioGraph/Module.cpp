@@ -117,7 +117,7 @@ void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 	{
 		for (auto& in : _controlInputs)
 		{
-			for (auto& c : in.connections)
+			for (auto& c : in._connections)
 			{
 				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
@@ -131,7 +131,7 @@ void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 	{
 		for (auto& in : _audioInputs)
 		{
-			for (auto& c : in.connections)
+			for (auto& c : in._connections)
 			{
 				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
@@ -148,7 +148,7 @@ void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 
 		for (auto& in : _controlInputs)
 		{
-			for (auto& c : in.connections)
+			for (auto& c : in._connections)
 			{
 				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
@@ -169,7 +169,7 @@ void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
 
 		for (auto& in : _audioInputs)
 		{
-			for (auto& c : in.connections)
+			for (auto& c : in._connections)
 			{
 				if (auto* upstream = parentGraph.getModuleById(c.fromId))
 				{
@@ -230,7 +230,7 @@ bool dc::Module::addConnectionInternal(const Connection& connection)
 			{
 				if (idx < _audioInputs.size())
 				{
-					_audioInputs[idx].connections.push_back(connection);
+					_audioInputs[idx]._connections.push_back(connection);
 					return true;
 				}
 			}
@@ -238,7 +238,7 @@ bool dc::Module::addConnectionInternal(const Connection& connection)
 			{
 				if (idx < _audioOutputs.size())
 				{
-					_audioOutputs[idx].connections.push_back(connection);
+					_audioOutputs[idx]._connections.push_back(connection);
 					return true;
 				}
 			}
@@ -248,7 +248,7 @@ bool dc::Module::addConnectionInternal(const Connection& connection)
 			{
 				if (idx < _controlInputs.size())
 				{
-					_controlInputs[idx].connections.push_back(connection);
+					_controlInputs[idx]._connections.push_back(connection);
 					return true;
 				}
 			}
@@ -256,7 +256,7 @@ bool dc::Module::addConnectionInternal(const Connection& connection)
 			{
 				if (idx < _controlOutputs.size())
 				{
-					_controlOutputs[idx].connections.push_back(connection);
+					_controlOutputs[idx]._connections.push_back(connection);
 					return true;
 				}
 			}
@@ -272,11 +272,11 @@ bool dc::Module::addConnectionInternal(const Connection& connection)
 void dc::Module::Io::removeConnection(const Connection& c)
 {
 	size_t i = 0;
-	while (i < connections.size())
+	while (i < _connections.size())
 	{
-		if (connections[i] == c)
+		if (_connections[i] == c)
 		{
-			connections.erase(connections.begin() + i);
+			_connections.erase(_connections.begin() + i);
 		}
 		else
 		{

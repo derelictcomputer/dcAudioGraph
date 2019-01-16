@@ -360,7 +360,7 @@ bool dc::Graph::moduleIsInputTo(Module* from, Module* to)
 
 	for (auto& in : to->_audioInputs)
 	{
-		for (auto& c : in.connections)
+		for (auto& c : in._connections)
 		{
 			if (auto* m = getModuleById(c.fromId))
 			{
@@ -373,7 +373,7 @@ bool dc::Graph::moduleIsInputTo(Module* from, Module* to)
 	}
 	for (auto& in : to->_controlInputs)
 	{
-		for (auto& c : in.connections)
+		for (auto& c : in._connections)
 		{
 			if (auto* m = getModuleById(c.fromId))
 			{
