@@ -11,6 +11,15 @@ dc::AudioBuffer::AudioBuffer(const AudioBuffer& other) : AudioBuffer(other._numS
 	copyFrom(other, false);
 }
 
+dc::AudioBuffer& dc::AudioBuffer::operator=(const AudioBuffer& other)
+{
+	if (this != &other)
+	{
+		copyFrom(other, true);
+	}
+	return *this;
+}
+
 dc::AudioBuffer::~AudioBuffer()
 {
 	free(_data);

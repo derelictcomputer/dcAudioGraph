@@ -11,6 +11,14 @@ TEST(AudioBuffer, CopyConstructor)
 	ASSERT_TRUE(buffersEqual(b1, b2));
 }
 
+TEST(AudioBuffer, CopyAssignment)
+{
+	AudioBuffer b1(123, 12);
+	b1.fill(0.1f);
+	AudioBuffer b2 = b1;
+	ASSERT_TRUE(buffersEqual(b1, b2));
+}
+
 TEST(AudioBuffer, ResizeFunctional)
 {
 	const size_t numSamples = 512;

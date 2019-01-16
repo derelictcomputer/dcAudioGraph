@@ -19,7 +19,7 @@ public:
 	AudioBuffer(size_t numSamples, size_t numChannels);
 
 	AudioBuffer(const AudioBuffer& other);
-	AudioBuffer& operator=(const AudioBuffer& other) = delete;
+	AudioBuffer& operator=(const AudioBuffer& other);
 	AudioBuffer(AudioBuffer&& other) = delete;
 	AudioBuffer& operator=(AudioBuffer&& other) = delete;
 
