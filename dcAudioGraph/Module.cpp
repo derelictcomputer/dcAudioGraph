@@ -1,6 +1,21 @@
 #include <algorithm>
-#include "Graph.h"
 #include "Module.h"
+
+dc::Module::ControlIo* dc::Module::getControlAt(size_t index, bool isInput)
+{
+	if (isInput)
+	{
+		if (index < getNumControlInputs())
+		{
+			return &_controlInputs[index];
+		}
+	}
+	else if (index < getNumControlOutputs())
+	{
+		return &_controlOutputs[index];
+	}
+	return nullptr;
+}
 
 dc::ModuleParam* dc::Module::getParamAt(size_t index)
 {
@@ -103,90 +118,6 @@ void dc::Module::addParam(const std::string& id, const std::string& displayName,
 	_params.emplace_back(id, displayName, range, serializable, controlInputIdx);
 }
 
-
-void dc::Module::pullFromUpstream(Graph& parentGraph, size_t rev)
-{
-	if (rev == _rev)
-	{
-		return;
-	}
-	_rev = rev;
-
-	// process upstream modules
-	if (!_controlInputs.empty())
-	{
-		for (auto& in : _controlInputs)
-		{
-			for (auto& c : in._connections)
-			{
-				if (auto* upstream = parentGraph.getModuleById(c.fromId))
-				{
-					upstream->pullFromUpstream(parentGraph, rev);
-				}
-			}
-		}
-	}
-
-	if (!_audioInputs.empty())
-	{
-		for (auto& in : _audioInputs)
-		{
-			for (auto& c : in._connections)
-			{
-				if (auto* upstream = parentGraph.getModuleById(c.fromId))
-				{
-					upstream->pullFromUpstream(parentGraph, rev);
-				}
-			}
-		}
-	}
-
-	// pull in control and audio
-	if (!_controlInputs.empty())
-	{
-		_controlBuffer.clear();
-
-		for (auto& in : _controlInputs)
-		{
-			for (auto& c : in._connections)
-			{
-				if (auto* upstream = parentGraph.getModuleById(c.fromId))
-				{
-					// just in case there's a dead connection
-					if (c.fromIdx >= upstream->getNumControlOutputs())
-					{
-						continue;
-					}
-					_controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
-				}
-			}
-		}
-	}
-
-	if (!_audioInputs.empty())
-	{
-		_audioBuffer.zero();
-
-		for (auto& in : _audioInputs)
-		{
-			for (auto& c : in._connections)
-			{
-				if (auto* upstream = parentGraph.getModuleById(c.fromId))
-				{
-					if (c.fromIdx >= upstream->getNumAudioOutputs())
-					{
-						continue;
-					}
-					_audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
-				}
-			}
-		}
-	}
-
-	// run this module's process
-	process();
-}
-
 void dc::Module::setBlockSizeInternal(size_t blockSize)
 {
 	_blockSize = blockSize;
@@ -210,128 +141,4 @@ void dc::Module::refreshControlBuffer()
 {
 	const size_t numChannels = std::max(_controlInputs.size(), _controlOutputs.size());
 	_controlBuffer.setNumChannels(numChannels);
-}
-
-bool dc::Module::addConnectionInternal(const Connection& connection)
-{
-	const auto type = connection.type;
-	const auto fromId = connection.fromId;
-	const auto toId = connection.toId;
-
-	if (fromId == _id || toId == _id)
-	{
-		const bool isInput = toId == _id;
-		const auto idx = isInput ? connection.toIdx : connection.fromIdx;
-
-		switch (type)
-		{
-		case Connection::Audio:
-			if (isInput)
-			{
-				if (idx < _audioInputs.size())
-				{
-					_audioInputs[idx]._connections.push_back(connection);
-					return true;
-				}
-			}
-			else
-			{
-				if (idx < _audioOutputs.size())
-				{
-					_audioOutputs[idx]._connections.push_back(connection);
-					return true;
-				}
-			}
-			break;
-		case Connection::Control:
-			if (isInput)
-			{
-				if (idx < _controlInputs.size())
-				{
-					_controlInputs[idx]._connections.push_back(connection);
-					return true;
-				}
-			}
-			else
-			{
-				if (idx < _controlOutputs.size())
-				{
-					_controlOutputs[idx]._connections.push_back(connection);
-					return true;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
-	return false;
-}
-
-void dc::Module::Io::removeConnection(const Connection& c)
-{
-	size_t i = 0;
-	while (i < _connections.size())
-	{
-		if (_connections[i] == c)
-		{
-			_connections.erase(_connections.begin() + i);
-		}
-		else
-		{
-			++i;
-		}
-	}
-}
-
-void dc::Module::removeConnectionInternal(const Connection& connection)
-{
-	const auto type = connection.type;
-	const auto fromId = connection.fromId;
-	const auto toId = connection.toId;
-
-	if (fromId == _id || toId == _id)
-	{
-		const bool isInput = toId == _id;
-		const auto idx = isInput ? connection.toIdx : connection.fromIdx;
-
-		switch (type)
-		{
-		case Connection::Audio:
-			if (isInput)
-			{
-				if (idx < _audioInputs.size())
-				{
-					_audioInputs[idx].removeConnection(connection);
-				}
-			}
-			else
-			{
-				if (idx < _audioOutputs.size())
-				{
-					_audioOutputs[idx].removeConnection(connection);
-				}
-			}
-			break;
-		case Connection::Control:
-			if (isInput)
-			{
-				if (idx < _controlInputs.size())
-				{
-					_controlInputs[idx].removeConnection(connection);
-				}
-			}
-			else
-			{
-				if (idx < _controlOutputs.size())
-				{
-					_controlOutputs[idx].removeConnection(connection);
-				}
-			}
-			break;
-		default: 
-			break;
-		}
-	}
 }

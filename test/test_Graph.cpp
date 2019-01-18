@@ -31,15 +31,15 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	{
 		bool res;
 		{
-			res = g.addConnection({ aIn->getId(), cIdx, gain->getId(), cIdx, Module::Connection::Audio });
+			res = g.addConnection({ aIn->getId(), cIdx, gain->getId(), cIdx, Graph::Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 		{
-			res = g.addConnection({ gain->getId(), cIdx, lm->getId(), cIdx, Module::Connection::Audio });
+			res = g.addConnection({ gain->getId(), cIdx, lm->getId(), cIdx, Graph::Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 		{
-			res = g.addConnection({ lm->getId(), cIdx, aOut->getId(), cIdx, Module::Connection::Audio });
+			res = g.addConnection({ lm->getId(), cIdx, aOut->getId(), cIdx, Graph::Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 	}
@@ -181,28 +181,28 @@ TEST(Graph, Connections)
 	ASSERT_EQ(g.getNumConnections(), 0);
 	auto* in = g.getInputModule();
 	auto id = g.addModule(std::make_unique<Gain>());
-	auto res = g.addConnection({ in->getId(), 0, id, 0, Module::Connection::Audio });
+	auto res = g.addConnection({ in->getId(), 0, id, 0, Graph::Connection::Audio });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
 	g.setNumAudioInputs(1);
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(id));
 	gain->setNumChannels(5);
-	res = g.addConnection({ in->getId(), 0, id, 4, Module::Connection::Audio });
+	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
-	g.removeConnection({ in->getId(), 0, id, 4, Module::Connection::Audio });
+	g.removeConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
 	ASSERT_EQ(g.getNumConnections(), 0);
-	res = g.addConnection({ in->getId(), 0, id, 0, Module::Connection::Control });
+	res = g.addConnection({ in->getId(), 0, id, 0, Graph::Connection::Control });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
-	res = g.addConnection({ in->getId(), 0, id, 4, Module::Connection::Audio });
+	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
 	g.setNumControlInputs(3);
 	id = g.addModule(std::make_unique<Graph>());
 	auto* graph = dynamic_cast<Graph*>(g.getModuleById(id));
 	graph->setNumControlInputs(9);
-	res = g.addConnection({ in->getId(), 1, id, 7, Module::Connection::Control });
+	res = g.addConnection({ in->getId(), 1, id, 7, Graph::Connection::Control });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 2);
 	g.disconnectModule(id);

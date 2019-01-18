@@ -14,6 +14,24 @@ namespace dc
 class Graph final : public Module
 {
 public:
+	struct Connection final
+	{
+		enum Type
+		{
+			Audio = 0,
+			Control
+		};
+
+		bool operator==(const Connection& other) const;
+		bool operator!=(const Connection& other) const { return !(*this == other); }
+
+		size_t fromId;
+		size_t fromIdx;
+		size_t toId;
+		size_t toIdx;
+		Type type;
+	};
+
 	Graph();
 
 	void setBlockSize(size_t blockSize);
@@ -56,10 +74,14 @@ private:
 		void process() override {}
 	};
 
+	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);
 	bool getModulesForConnection(const Connection& connection, Module*& from, Module*& to);
 	bool connectionCreatesLoop(const Connection& connection);
 	bool moduleIsInputTo(Module* from, Module* to);
+
+	void processModule(Module& m);
+	bool getInputConnectionsForModule(Module& m, std::vector<Connection>& connections);
 
 	GraphIoModule _input;
 	GraphIoModule _output;

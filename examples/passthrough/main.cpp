@@ -78,8 +78,8 @@ int main()
 		auto inId = in->getId();
 		auto* out = graph.getOutputModule();
 		auto outId = out->getId();
-		graph.addConnection({ inId, 0, outId, 0, dc::Module::Connection::Audio });
-		graph.addConnection({ inId, 1, outId, 1, dc::Module::Connection::Audio });
+		graph.addConnection({ inId, 0, outId, 0, dc::Graph::Connection::Audio });
+		graph.addConnection({ inId, 1, outId, 1, dc::Graph::Connection::Audio });
 	}
 
     PaStream* stream;

@@ -27,30 +27,9 @@ namespace dc
 class Module
 {
 public:
-	struct Connection final
-	{
-		enum Type
-		{
-			Audio = 0,
-			Control
-		};
-
-		bool operator==(const Connection& other) const;
-		bool operator!=(const Connection& other) const { return !(*this == other); }
-
-		size_t fromId;
-		size_t fromIdx;
-		size_t toId;
-		size_t toIdx;
-		Type type;
-	};
-
 	class Io
 	{
 	public:
-		friend class Module;
-		friend class Graph;
-
 		explicit Io(std::string description) : _description(std::move(description)) {}
 
 		std::string getDescription() const { return _description; }
@@ -58,11 +37,8 @@ public:
 		void setScale(float scale) { _scale = scale; }
 
 	private:
-		void removeConnection(const Connection& c);
-
 		std::string _description;
 		float _scale = 1.0f;
-		std::vector<Connection> _connections;
 	};
 
 	class ControlIo final : public Io
@@ -99,6 +75,7 @@ public:
 	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
 	size_t getNumControlInputs() const { return _controlInputs.size(); }
 	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
+	ControlIo* getControlAt(size_t index, bool isInput);
 
 	size_t getNumParams() const { return _params.size(); }
 	ModuleParam* getParamAt(size_t index);
@@ -126,15 +103,10 @@ protected:
 	ControlBuffer _controlBuffer;
 
 private:
-	void pullFromUpstream(Graph& parentGraph, size_t rev);
-
 	void setBlockSizeInternal(size_t blockSize);
 	void setSampleRateInternal(double sampleRate);
 	void refreshAudioBuffer();
 	void refreshControlBuffer();
-
-	bool addConnectionInternal(const Connection& connection);
-	void removeConnectionInternal(const Connection& connection);
 
 	std::vector<Io> _audioInputs;
 	std::vector<Io> _audioOutputs;
