@@ -12,6 +12,7 @@
 
 dc::AudioBuffer audioBuffer;
 dc::ControlBuffer controlBuffer;
+const size_t nGraphIo = 2;
 
 int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData)
@@ -20,9 +21,9 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
     float* outSamples = static_cast<float*>(outputBuffer);
 
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
-    audioBuffer.fromInterleaved(inSamples, framesPerBuffer, graph->getNumAudioInputs(), false);
+    audioBuffer.fromInterleaved(inSamples, framesPerBuffer, nGraphIo, false);
     graph->process(audioBuffer, controlBuffer);
-	audioBuffer.toInterleaved(outSamples, framesPerBuffer, graph->getNumAudioOutputs());
+	audioBuffer.toInterleaved(outSamples, framesPerBuffer, nGraphIo);
 	return paContinue;
 }
 
@@ -72,8 +73,8 @@ int main()
 	{
 		graph.setBlockSize(64);
 		graph.setSampleRate(48000);
-		graph.setNumAudioInputs(2);
-		graph.setNumAudioOutputs(2);
+		graph.getParamById("nAudIn")->setRaw(nGraphIo);
+		graph.getParamById("nAudOut")->setRaw(nGraphIo);
 		auto* in = graph.getInputModule();
 		auto inId = in->getId();
 		auto* out = graph.getOutputModule();

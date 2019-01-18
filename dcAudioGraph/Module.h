@@ -55,7 +55,7 @@ public:
 	// let the parent graph reach in here
 	friend class Graph;
 
-	Module() = default;
+	Module();
 	virtual ~Module() = default;
 
 	// TODO: allow copy of modules, it'll be needed for eg. editor applications
@@ -71,11 +71,10 @@ public:
 	size_t getBlockSize() const { return _blockSize; }
 	double getSampleRate() const { return _sampleRate; }
 
-	size_t getNumAudioInputs() const { return _audioInputs.size(); }
-	size_t getNumAudioOutputs() const { return _audioOutputs.size(); }
-	size_t getNumControlInputs() const { return _controlInputs.size(); }
-	size_t getNumControlOutputs() const { return _controlOutputs.size(); }
-	ControlIo* getControlAt(size_t index, bool isInput);
+	size_t getNumAudioIo(bool isInput);
+	Io* getAudioIoAt(size_t index, bool isInput);
+	size_t getNumControlIo(bool isInput) const;
+	ControlIo* getControlIoAt(size_t index, bool isInput);
 
 	size_t getNumParams() const { return _params.size(); }
 	ModuleParam* getParamAt(size_t index);

@@ -37,11 +37,6 @@ public:
 	void setBlockSize(size_t blockSize);
 	void setSampleRate(double sampleRate);
 
-	void setNumAudioInputs(size_t count);
-	void setNumAudioOutputs(size_t count);
-	void setNumControlInputs(size_t count);
-	void setNumControlOutputs(size_t count);
-
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
 
 	Module* getInputModule() { return &_input; }
@@ -62,8 +57,6 @@ public:
 
 protected:
 	void process() override;
-	void audioIoCountChanged() override;
-	void controlIoCountChanged() override;
 
 private:
 	// Just a passthrough for processing graph I/O
@@ -73,6 +66,9 @@ private:
 	protected:
 		void process() override {}
 	};
+
+	void setNumAudioIo(size_t num, bool isInput);
+	void setNumControlIo(size_t num, bool isInput);
 
 	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);

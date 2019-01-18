@@ -1,5 +1,11 @@
 #include "LevelMeter.h"
 
+dc::LevelMeter::LevelMeter()
+{
+	addParam("nChannels", "# Channels", ParamRange(1, 16, 1), true, false);
+	getParamAt(0)->setRaw(1);
+}
+
 float dc::LevelMeter::getLevel(size_t channel)
 {
 	if (channel < _levels.size())
@@ -9,25 +15,21 @@ float dc::LevelMeter::getLevel(size_t channel)
 	return 0.0f;
 }
 
-void dc::LevelMeter::setNumChannels(size_t numChannels)
+void dc::LevelMeter::process()
 {
-	while (numChannels < getNumAudioInputs())
+	const size_t nChannels = static_cast<size_t>(getParamAt(0)->getRaw());
+	while (nChannels < getNumAudioIo(true))
 	{
-		const size_t idx = getNumAudioInputs() - 1;
+		const size_t idx = getNumAudioIo(true) - 1;
 		removeAudioIo(idx, true);
 		removeAudioIo(idx, false);
-		_levels.pop_back();
 	}
-	while (numChannels > getNumAudioInputs())
+	while (nChannels > getNumAudioIo(true))
 	{
 		addAudioIo(true);
 		addAudioIo(false);
-		_levels.emplace_back(0.0f);
 	}
-}
 
-void dc::LevelMeter::process()
-{
 	for (size_t cIdx = 0; cIdx < _audioBuffer.getNumChannels(); ++cIdx)
 	{
 		auto* cPtr = _audioBuffer.getChannelPointer(cIdx);

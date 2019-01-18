@@ -1,18 +1,39 @@
 #include <algorithm>
 #include "Module.h"
 
-dc::Module::ControlIo* dc::Module::getControlAt(size_t index, bool isInput)
+dc::Module::Module()
 {
-	if (isInput)
+	_audioInputs.reserve(16);
+	_audioOutputs.reserve(16);
+	_controlInputs.reserve(16);
+	_controlOutputs.reserve(16);
+	_params.reserve(16);
+}
+
+size_t dc::Module::getNumAudioIo(bool isInput)
+{
+	return isInput ? _audioInputs.size() : _audioOutputs.size();
+}
+
+dc::Module::Io* dc::Module::getAudioIoAt(size_t index, bool isInput)
+{
+	if (index < getNumAudioIo(isInput))
 	{
-		if (index < getNumControlInputs())
-		{
-			return &_controlInputs[index];
-		}
+		return isInput ? &_audioInputs[index] : &_controlInputs[index];
 	}
-	else if (index < getNumControlOutputs())
+	return nullptr;
+}
+
+size_t dc::Module::getNumControlIo(bool isInput) const
+{
+	return isInput ? _controlInputs.size() : _controlOutputs.size();
+}
+
+dc::Module::ControlIo* dc::Module::getControlIoAt(size_t index, bool isInput)
+{
+	if (index < getNumControlIo(isInput))
 	{
-		return &_controlOutputs[index];
+		return isInput ? &_controlInputs[index] : &_controlOutputs[index];
 	}
 	return nullptr;
 }

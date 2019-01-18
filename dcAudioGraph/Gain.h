@@ -13,8 +13,6 @@ class Gain : public Module
 public:
 	Gain();
 
-	void setNumChannels(size_t numChannels);
-
 protected:
 	void process() override;
 };

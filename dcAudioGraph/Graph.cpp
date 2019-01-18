@@ -14,6 +14,15 @@ dc::Graph::Graph()
 {
 	_input._id = _nextModuleId++;
 	_output._id = _nextModuleId++;
+
+	addParam("nCtlIn", "# Control Inputs", ParamRange(1, 16, 1), true, false);
+	getParamAt(0)->setRaw(1);
+	addParam("nCtlOut", "# Control Outputs", ParamRange(1, 16, 1), true, false);
+	getParamAt(1)->setRaw(1);
+	addParam("nAudIn", "# Audio Inputs", ParamRange(1, 16, 1), true, false);
+	getParamAt(2)->setRaw(1);
+	addParam("nAudOut", "# Audio Inputs", ParamRange(1, 16, 1), true, false);
+	getParamAt(3)->setRaw(1);
 }
 
 void dc::Graph::setBlockSize(size_t blockSize)
@@ -38,57 +47,26 @@ void dc::Graph::setSampleRate(double sampleRate)
 	}
 }
 
-void dc::Graph::setNumAudioInputs(size_t count)
-{
-	while (count < getNumAudioInputs())
-	{
-		removeAudioIo(getNumAudioInputs() - 1, true);
-	}
-	while (count > getNumAudioInputs())
-	{
-		addAudioIo(true);
-	}
-}
-
-void dc::Graph::setNumAudioOutputs(size_t count)
-{
-	while (count < getNumAudioOutputs())
-	{
-		removeAudioIo(getNumAudioOutputs() - 1, false);
-	}
-	while (count > getNumAudioOutputs())
-	{
-		addAudioIo(false);
-	}
-}
-
-void dc::Graph::setNumControlInputs(size_t count)
-{
-	while (count < getNumControlInputs())
-	{
-		removeControlIo(getNumControlInputs() - 1, true);
-	}
-	while (count > getNumControlInputs())
-	{
-		addControlIo(true, ControlMessage::All);
-	}
-}
-
-void dc::Graph::setNumControlOutputs(size_t count)
-{
-	while (count < getNumControlOutputs())
-	{
-		removeControlIo(getNumControlOutputs() - 1, false);
-	}
-	while (count > getNumControlOutputs())
-	{
-		addControlIo(false, ControlMessage::All);
-	}
-
-}
-
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
 {
+	// update I/O
+	{
+		const size_t n = static_cast<size_t>(getParamAt(0)->getRaw());
+		setNumControlIo(n, true);
+	}
+	{
+		const size_t n = static_cast<size_t>(getParamAt(1)->getRaw());
+		setNumControlIo(n, false);
+	}
+	{
+		const size_t n = static_cast<size_t>(getParamAt(2)->getRaw());
+		setNumAudioIo(n, true);
+	}
+	{
+		const size_t n = static_cast<size_t>(getParamAt(3)->getRaw());
+		setNumAudioIo(n, false);
+	}
+
 	// increment the graph revision (if this is the top level graph)
 	if (incrementRev)
 	{
@@ -247,43 +225,61 @@ void dc::Graph::process()
 	process(_audioBuffer, _controlBuffer, false);
 }
 
-void dc::Graph::audioIoCountChanged()
+void dc::Graph::setNumAudioIo(size_t num, bool isInput)
 {
-	while (getNumAudioInputs() < _input.getNumAudioOutputs())
+	while (num < getNumAudioIo(isInput))
 	{
-		_input.removeAudioIo(_input.getNumAudioOutputs() - 1, false);
+		const size_t idx = getNumAudioIo(isInput) - 1;
+		removeAudioIo(idx, isInput);
+		if (isInput)
+		{
+			_input.removeAudioIo(idx, false);
+		}
+		else
+		{
+			_output.removeAudioIo(idx, true);
+		}
 	}
-	while (getNumAudioInputs() > _input.getNumAudioOutputs())
+	while (num > getNumAudioIo(isInput))
 	{
-		_input.addAudioIo(false);
-	}
-	while (getNumAudioOutputs() < _output.getNumAudioInputs())
-	{
-		_output.removeAudioIo(_output.getNumAudioInputs() - 1, true);
-	}
-	while (getNumAudioOutputs() > _output.getNumAudioInputs())
-	{
-		_output.addAudioIo(true);
+		addAudioIo(isInput);
+		if (isInput)
+		{
+			_input.addAudioIo(false);
+		}
+		else
+		{
+			_output.addAudioIo(true);
+		}
 	}
 }
 
-void dc::Graph::controlIoCountChanged()
+void dc::Graph::setNumControlIo(size_t num, bool isInput)
 {
-	while (getNumControlInputs() < _input.getNumControlOutputs())
+	while (num < getNumControlIo(isInput))
 	{
-		_input.removeControlIo(_input.getNumControlOutputs() - 1, false);
+		const size_t idx = getNumControlIo(isInput) - 1;
+		removeControlIo(idx, isInput);
+		if (isInput)
+		{
+			_input.removeControlIo(idx, false);
+		}
+		else
+		{
+			_output.removeControlIo(idx, true);
+		}
 	}
-	while (getNumControlInputs() > _input.getNumControlOutputs())
+	while (num > getNumControlIo(isInput))
 	{
-		_input.addControlIo(false, ControlMessage::All);
-	}
-	while (getNumControlOutputs() < _output.getNumControlInputs())
-	{
-		_output.removeControlIo(_output.getNumControlInputs() - 1, true);
-	}
-	while (getNumControlOutputs() > _output.getNumControlInputs())
-	{
-		_output.addControlIo(true, ControlMessage::All);
+		addControlIo(isInput, ControlMessage::All);
+		if (isInput)
+		{
+			_input.addControlIo(false, ControlMessage::All);
+		}
+		else
+		{
+			_output.addControlIo(true, ControlMessage::All);
+		}
 	}
 }
 
@@ -306,7 +302,7 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 	{
 	case Connection::Audio: 
 	{
-		if (connection.fromIdx >= from->getNumAudioOutputs() || connection.toIdx >= to->getNumAudioInputs())
+		if (connection.fromIdx >= from->getNumAudioIo(false) || connection.toIdx >= to->getNumAudioIo(true))
 		{
 			return false;
 		}
@@ -314,8 +310,8 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 	}
 	case Connection::Control: 
 	{
-		auto* fromOut = from->getControlAt(connection.fromIdx, false);
-		auto* toIn = to->getControlAt(connection.toIdx, true);
+		auto* fromOut = from->getControlIoAt(connection.fromIdx, false);
+		auto* toIn = to->getControlIoAt(connection.toIdx, true);
 
 		if (nullptr == fromOut || nullptr == toIn)
 		{
@@ -429,7 +425,7 @@ void dc::Graph::processModule(Module& m)
 				{
 				case Connection::Audio:
 				{
-					if (c.fromIdx < upstream->getNumAudioOutputs())
+					if (c.fromIdx < upstream->getNumAudioIo(false))
 					{
 						m._audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
 					}
@@ -437,7 +433,7 @@ void dc::Graph::processModule(Module& m)
 				}
 				case Connection::Control: 
 				{
-					if (c.fromIdx < upstream->getNumControlOutputs())
+					if (c.fromIdx < upstream->getNumControlIo(false))
 					{
 						m._controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
 					}
