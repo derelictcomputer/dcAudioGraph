@@ -14,58 +14,91 @@ dc::Graph::Graph()
 {
 	_input._id = _nextModuleId++;
 	_output._id = _nextModuleId++;
-
-	addParam("nCtlIn", "# Control Inputs", ParamRange(1, 16, 1), true, false);
-	getParamAt(0)->setRaw(1);
-	addParam("nCtlOut", "# Control Outputs", ParamRange(1, 16, 1), true, false);
-	getParamAt(1)->setRaw(1);
-	addParam("nAudIn", "# Audio Inputs", ParamRange(1, 16, 1), true, false);
-	getParamAt(2)->setRaw(1);
-	addParam("nAudOut", "# Audio Inputs", ParamRange(1, 16, 1), true, false);
-	getParamAt(3)->setRaw(1);
 }
 
 void dc::Graph::setBlockSize(size_t blockSize)
 {
-	setBlockSizeInternal(blockSize);
-	_input.setBlockSizeInternal(blockSize);
-	_output.setBlockSizeInternal(blockSize);
+	_blockSize = blockSize;
+	_input._blockSize = blockSize;
+	_output._blockSize = blockSize;
 	for (auto& m : _modules)
 	{
-		m->setBlockSizeInternal(blockSize);
+		m->_blockSize = blockSize;
 	}
 }
 
 void dc::Graph::setSampleRate(double sampleRate)
 {
-	setSampleRateInternal(sampleRate);
-	_input.setSampleRateInternal(sampleRate);
-	_output.setSampleRateInternal(sampleRate);
+	_sampleRate = sampleRate;
+	_input._sampleRate = sampleRate;
+	_output._sampleRate = sampleRate;
 	for (auto& m : _modules)
 	{
-		m->setSampleRateInternal(sampleRate);
+		m->_sampleRate = sampleRate;
+	}
+}
+
+void dc::Graph::setNumAudioIo(size_t num, bool isInput)
+{
+	while (num < getNumAudioIo(isInput))
+	{
+		const size_t idx = getNumAudioIo(isInput) - 1;
+		removeAudioIo(idx, isInput);
+		if (isInput)
+		{
+			_input.removeAudioIo(idx, false);
+		}
+		else
+		{
+			_output.removeAudioIo(idx, true);
+		}
+	}
+	while (num > getNumAudioIo(isInput))
+	{
+		addAudioIo(isInput);
+		if (isInput)
+		{
+			_input.addAudioIo(false);
+		}
+		else
+		{
+			_output.addAudioIo(true);
+		}
+	}
+}
+
+void dc::Graph::setNumControlIo(size_t num, bool isInput)
+{
+	while (num < getNumControlIo(isInput))
+	{
+		const size_t idx = getNumControlIo(isInput) - 1;
+		removeControlIo(idx, isInput);
+		if (isInput)
+		{
+			_input.removeControlIo(idx, false);
+		}
+		else
+		{
+			_output.removeControlIo(idx, true);
+		}
+	}
+	while (num > getNumControlIo(isInput))
+	{
+		addControlIo(isInput, ControlMessage::All);
+		if (isInput)
+		{
+			_input.addControlIo(false, ControlMessage::All);
+		}
+		else
+		{
+			_output.addControlIo(true, ControlMessage::All);
+		}
 	}
 }
 
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
 {
-	// update I/O
-	{
-		const size_t n = static_cast<size_t>(getParamAt(0)->getRaw());
-		setNumControlIo(n, true);
-	}
-	{
-		const size_t n = static_cast<size_t>(getParamAt(1)->getRaw());
-		setNumControlIo(n, false);
-	}
-	{
-		const size_t n = static_cast<size_t>(getParamAt(2)->getRaw());
-		setNumAudioIo(n, true);
-	}
-	{
-		const size_t n = static_cast<size_t>(getParamAt(3)->getRaw());
-		setNumAudioIo(n, false);
-	}
+	updateBuffers();
 
 	// increment the graph revision (if this is the top level graph)
 	if (incrementRev)
@@ -100,8 +133,8 @@ size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 		return 0;
 	}
 
-	module->setBlockSizeInternal(_blockSize);
-	module->setSampleRateInternal(_sampleRate);
+	module->_blockSize.store(_blockSize.load());
+	module->_sampleRate.store(_sampleRate.load());
 	const size_t id = _nextModuleId++;
 	module->_id = id;
 	_modules.push_back(std::move(module));
@@ -225,64 +258,6 @@ void dc::Graph::process()
 	process(_audioBuffer, _controlBuffer, false);
 }
 
-void dc::Graph::setNumAudioIo(size_t num, bool isInput)
-{
-	while (num < getNumAudioIo(isInput))
-	{
-		const size_t idx = getNumAudioIo(isInput) - 1;
-		removeAudioIo(idx, isInput);
-		if (isInput)
-		{
-			_input.removeAudioIo(idx, false);
-		}
-		else
-		{
-			_output.removeAudioIo(idx, true);
-		}
-	}
-	while (num > getNumAudioIo(isInput))
-	{
-		addAudioIo(isInput);
-		if (isInput)
-		{
-			_input.addAudioIo(false);
-		}
-		else
-		{
-			_output.addAudioIo(true);
-		}
-	}
-}
-
-void dc::Graph::setNumControlIo(size_t num, bool isInput)
-{
-	while (num < getNumControlIo(isInput))
-	{
-		const size_t idx = getNumControlIo(isInput) - 1;
-		removeControlIo(idx, isInput);
-		if (isInput)
-		{
-			_input.removeControlIo(idx, false);
-		}
-		else
-		{
-			_output.removeControlIo(idx, true);
-		}
-	}
-	while (num > getNumControlIo(isInput))
-	{
-		addControlIo(isInput, ControlMessage::All);
-		if (isInput)
-		{
-			_input.addControlIo(false, ControlMessage::All);
-		}
-		else
-		{
-			_output.addControlIo(true, ControlMessage::All);
-		}
-	}
-}
-
 bool dc::Graph::connectionIsValid(const Connection& connection)
 {
 	if (connectionExists(connection))
@@ -400,6 +375,8 @@ void dc::Graph::processModule(Module& m)
 		return;
 	}
 	m._rev = _rev;
+
+	m.updateBuffers();
 
 	std::vector<Connection> connections;
 	if (getInputConnectionsForModule(m, connections))

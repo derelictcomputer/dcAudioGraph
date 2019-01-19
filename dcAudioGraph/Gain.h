@@ -13,6 +13,9 @@ class Gain : public Module
 public:
 	Gain();
 
+	void setNumAudioIo(size_t num, bool isInput) override;
+	void setNumControlIo(size_t num, bool isInput) override {}
+
 protected:
 	void process() override;
 };

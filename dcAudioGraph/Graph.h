@@ -37,6 +37,9 @@ public:
 	void setBlockSize(size_t blockSize);
 	void setSampleRate(double sampleRate);
 
+	void setNumAudioIo(size_t num, bool isInput) override;
+	void setNumControlIo(size_t num, bool isInput) override;
+
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
 
 	Module* getInputModule() { return &_input; }
@@ -66,9 +69,6 @@ private:
 	protected:
 		void process() override {}
 	};
-
-	void setNumAudioIo(size_t num, bool isInput);
-	void setNumControlIo(size_t num, bool isInput);
 
 	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);

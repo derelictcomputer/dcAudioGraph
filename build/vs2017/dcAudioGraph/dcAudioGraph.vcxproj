@@ -34,8 +34,10 @@
     <ClInclude Include="..\..\..\dcAudioGraph\Gain.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\LevelMeter.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\MessageQueue.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\PointerSwapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

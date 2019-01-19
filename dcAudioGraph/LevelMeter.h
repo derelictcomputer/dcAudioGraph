@@ -16,6 +16,9 @@ public:
 
 	float getLevel(size_t channel);
 
+	void setNumAudioIo(size_t num, bool isInput) override;
+	void setNumControlIo(size_t num, bool isInput) override {}
+
 protected:
 	void process() override;
 

@@ -19,10 +19,14 @@
 #include "AudioBuffer.h"
 #include "ControlBuffer.h"
 #include "ModuleParam.h"
+#include "PointerSwapper.h"
 
 namespace dc
 {
-// TODO: thread safety for resizing of I/O, buffers, and params
+// defaults for buffer and I/O maximums
+const size_t DEFAULT_MAX_BLOCK_SIZE = 1024;
+const size_t DEFAULT_MAX_AUDIO_CHANNELS = 16;
+const size_t DEFAULT_MAX_CONTROL_CHANNELS = 16;
 
 class Module
 {
@@ -62,18 +66,24 @@ public:
 	Module(const Module& other) = delete;
 	Module& operator=(const Module& other) = delete;
 
-	// disallow move, for now
+	// disallow move
 	Module(Module&& other) = delete;
 	Module& operator=(Module&& other) = delete;
 
 	size_t getId() const { return _id; }
 
+	const size_t _maxBlockSize;
+	const size_t _maxAudioChannels;
+	const size_t _maxControlChannels;
+
 	size_t getBlockSize() const { return _blockSize; }
 	double getSampleRate() const { return _sampleRate; }
 
-	size_t getNumAudioIo(bool isInput);
+	size_t getNumAudioIo(bool isInput) const;
+	virtual void setNumAudioIo(size_t num, bool isInput);
 	Io* getAudioIoAt(size_t index, bool isInput);
 	size_t getNumControlIo(bool isInput) const;
+	virtual void setNumControlIo(size_t num, bool isInput);
 	ControlIo* getControlIoAt(size_t index, bool isInput);
 
 	size_t getNumParams() const { return _params.size(); }
@@ -92,20 +102,12 @@ protected:
 	// implement this to do something to audio or control
 	virtual void process() = 0;
 
-	// override these if you need to update your module for changes in size
-	virtual void blockSizeChanged() {}
-	virtual void sampleRateChanged() {}
-	virtual void audioIoCountChanged() {}
-	virtual void controlIoCountChanged() {}
-
+	// only touch these in your process method
 	AudioBuffer _audioBuffer;
 	ControlBuffer _controlBuffer;
 
 private:
-	void setBlockSizeInternal(size_t blockSize);
-	void setSampleRateInternal(double sampleRate);
-	void refreshAudioBuffer();
-	void refreshControlBuffer();
+	void updateBuffers();
 
 	std::vector<Io> _audioInputs;
 	std::vector<Io> _audioOutputs;
@@ -115,7 +117,12 @@ private:
 
 	size_t _id = 0;
 	size_t _rev = 0;
-	size_t _blockSize = 0;
-	double _sampleRate = 0;
+
+	std::atomic<double> _sampleRate{ 0 };
+	std::atomic<size_t> _blockSize{ 0 };
+	std::atomic<size_t> _numAudioInputs{ 0 };
+	std::atomic<size_t> _numAudioOutputs{ 0 };
+	std::atomic<size_t> _numControlInputs{ 0 };
+	std::atomic<size_t> _numControlOutputs{ 0 };
 };
 }

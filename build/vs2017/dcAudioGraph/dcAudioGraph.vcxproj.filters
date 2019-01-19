@@ -48,6 +48,12 @@
     <ClInclude Include="..\..\..\dcAudioGraph\Gain.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\MessageQueue.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\dcAudioGraph\PointerSwapper.h">
+      <Filter>dcAudioGraph</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="dcAudioGraph">

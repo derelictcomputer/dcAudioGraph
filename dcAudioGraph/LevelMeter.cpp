@@ -2,8 +2,7 @@
 
 dc::LevelMeter::LevelMeter()
 {
-	addParam("nChannels", "# Channels", ParamRange(1, 16, 1), true, false);
-	getParamAt(0)->setRaw(1);
+	_levels.reserve(_maxAudioChannels);
 }
 
 float dc::LevelMeter::getLevel(size_t channel)
@@ -15,19 +14,30 @@ float dc::LevelMeter::getLevel(size_t channel)
 	return 0.0f;
 }
 
-void dc::LevelMeter::process()
+void dc::LevelMeter::setNumAudioIo(size_t num, bool isInput)
 {
-	const size_t nChannels = static_cast<size_t>(getParamAt(0)->getRaw());
-	while (nChannels < getNumAudioIo(true))
+	while (num < getNumAudioIo(true))
 	{
-		const size_t idx = getNumAudioIo(true) - 1;
-		removeAudioIo(idx, true);
-		removeAudioIo(idx, false);
+		removeAudioIo(getNumAudioIo(true) - 1, true);
+		removeAudioIo(getNumAudioIo(false) - 1, false);
 	}
-	while (nChannels > getNumAudioIo(true))
+	while (num > getNumAudioIo(true))
 	{
 		addAudioIo(true);
 		addAudioIo(false);
+	}
+}
+
+void dc::LevelMeter::process()
+{
+	const size_t nChannels = getNumAudioIo(true);
+	while (nChannels < _levels.size())
+	{
+		_levels.pop_back();
+	}
+	while (nChannels > _levels.size())
+	{
+		_levels.emplace_back(0.0f);
 	}
 
 	for (size_t cIdx = 0; cIdx < _audioBuffer.getNumChannels(); ++cIdx)
