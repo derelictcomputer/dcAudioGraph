@@ -6,15 +6,14 @@ dc::Gain::Gain()
 	getParamById("gain")->setRaw(1.0f);
 }
 
-void dc::Gain::setNumChannels(size_t numChannels)
+void dc::Gain::setNumAudioIo(size_t num, bool isInput)
 {
-	while (numChannels < getNumAudioInputs())
+	while (num < getNumAudioIo(true))
 	{
-		const size_t idx = getNumAudioInputs() - 1;
-		removeAudioIo(idx, true);
-		removeAudioIo(idx, false);
+		removeAudioIo(getNumAudioIo(true) - 1, true);
+		removeAudioIo(getNumAudioIo(false) - 1, false);
 	}
-	while (numChannels > getNumAudioInputs())
+	while (num > getNumAudioIo(true))
 	{
 		addAudioIo(true);
 		addAudioIo(false);

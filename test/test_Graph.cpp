@@ -7,20 +7,20 @@ using namespace dc;
 
 void makeBasicGraph(Graph& g, size_t numIo)
 {
-	auto lmId = g.addModule(std::make_unique<LevelMeter>());
+	const auto lmId = g.addModule(std::make_unique<LevelMeter>());
 	auto* lm = dynamic_cast<LevelMeter*>(g.getModuleById(lmId));
 	ASSERT_NE(lm, nullptr);
-	lm->setNumChannels(numIo);
+	lm->setNumAudioIo(numIo, true);
 
-	auto gId = g.addModule(std::make_unique<Gain>());
+	const auto gId = g.addModule(std::make_unique<Gain>());
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(gId));
 	ASSERT_NE(gain, nullptr);
-	gain->setNumChannels(numIo);
+	gain->setNumAudioIo(numIo, true);
 
-	g.setNumAudioInputs(numIo);
-	EXPECT_EQ(g.getNumAudioInputs(), numIo);
-	g.setNumAudioOutputs(numIo);
-	EXPECT_EQ(g.getNumAudioOutputs(), numIo);
+	g.setNumAudioIo(numIo, true);
+	EXPECT_EQ(g.getNumAudioIo(true), numIo);
+	g.setNumAudioIo(numIo, false);
+	EXPECT_EQ(g.getNumAudioIo(false), numIo);
 
 	auto* aIn = g.getInputModule();
 	ASSERT_NE(aIn, nullptr);
@@ -111,10 +111,10 @@ TEST(Graph, AddRemove)
 TEST(Graph, SetNumIo)
 {
 	Graph g;
-	ASSERT_EQ(g.getNumAudioInputs(), 0);
-	ASSERT_EQ(g.getNumAudioOutputs(), 0);
-	ASSERT_EQ(g.getNumControlInputs(), 0);
-	ASSERT_EQ(g.getNumControlOutputs(), 0);
+	ASSERT_EQ(g.getNumAudioIo(true), 0);
+	ASSERT_EQ(g.getNumAudioIo(false), 0);
+	ASSERT_EQ(g.getNumControlIo(true), 0);
+	ASSERT_EQ(g.getNumControlIo(false), 0);
 	{
 		const size_t numAIn = 5;
 		const size_t numAOut = 17;
@@ -122,56 +122,22 @@ TEST(Graph, SetNumIo)
 		const size_t numCOut = 3;
 		auto* in = g.getInputModule();
 		auto* out = g.getOutputModule();
-		g.setNumAudioInputs(numAIn);
-		ASSERT_EQ(g.getNumAudioInputs(), numAIn);
-		ASSERT_EQ(in->getNumAudioOutputs(), numAIn);
-		ASSERT_EQ(out->getNumAudioInputs(), 0);
-		g.setNumAudioOutputs(numAOut);
-		ASSERT_EQ(g.getNumAudioOutputs(), numAOut);
-		ASSERT_EQ(out->getNumAudioInputs(), numAOut);
-		ASSERT_EQ(in->getNumAudioOutputs(), numAIn);
-		g.setNumControlInputs(numCIn);
-		ASSERT_EQ(g.getNumControlInputs(), numCIn);
-		ASSERT_EQ(in->getNumControlOutputs(), numCIn);
-		ASSERT_EQ(out->getNumControlInputs(), 0);
-		g.setNumControlOutputs(numCOut);
-		ASSERT_EQ(g.getNumControlOutputs(), numCOut);
-		ASSERT_EQ(out->getNumControlInputs(), numCOut);
-		ASSERT_EQ(in->getNumControlOutputs(), numCIn);
-	}
-	{
-		g.setNumAudioInputs(0);
-		g.setNumAudioOutputs(0);
-		g.setNumControlInputs(0);
-		g.setNumControlOutputs(0);
-		ASSERT_EQ(g.getNumAudioInputs(), 0);
-		ASSERT_EQ(g.getNumAudioOutputs(), 0);
-		ASSERT_EQ(g.getNumControlInputs(), 0);
-		ASSERT_EQ(g.getNumControlOutputs(), 0);
-	}
-	{
-		const size_t numAIn = 18;
-		const size_t numAOut = 57;
-		const size_t numCIn = 12;
-		const size_t numCOut = 9;
-		auto* in = g.getInputModule();
-		auto* out = g.getOutputModule();
-		g.setNumAudioInputs(numAIn);
-		ASSERT_EQ(g.getNumAudioInputs(), numAIn);
-		ASSERT_EQ(in->getNumAudioOutputs(), numAIn);
-		ASSERT_EQ(out->getNumAudioInputs(), 0);
-		g.setNumAudioOutputs(numAOut);
-		ASSERT_EQ(g.getNumAudioOutputs(), numAOut);
-		ASSERT_EQ(out->getNumAudioInputs(), numAOut);
-		ASSERT_EQ(in->getNumAudioOutputs(), numAIn);
-		g.setNumControlInputs(numCIn);
-		ASSERT_EQ(g.getNumControlInputs(), numCIn);
-		ASSERT_EQ(in->getNumControlOutputs(), numCIn);
-		ASSERT_EQ(out->getNumControlInputs(), 0);
-		g.setNumControlOutputs(numCOut);
-		ASSERT_EQ(g.getNumControlOutputs(), numCOut);
-		ASSERT_EQ(out->getNumControlInputs(), numCOut);
-		ASSERT_EQ(in->getNumControlOutputs(), numCIn);
+		g.setNumAudioIo(numAIn, true);
+		ASSERT_EQ(g.getNumAudioIo(true), numAIn);
+		ASSERT_EQ(in->getNumAudioIo(false), numAIn);
+		ASSERT_EQ(out->getNumAudioIo(true), 0);
+		g.setNumAudioIo(numAOut, false);
+		ASSERT_EQ(g.getNumAudioIo(false), numAOut);
+		ASSERT_EQ(out->getNumAudioIo(true), numAOut);
+		ASSERT_EQ(in->getNumAudioIo(false), numAIn);
+		g.setNumControlIo(numCIn, true);
+		ASSERT_EQ(g.getNumControlIo(true), numCIn);
+		ASSERT_EQ(in->getNumControlIo(false), numCIn);
+		ASSERT_EQ(out->getNumControlIo(true), 0);
+		g.setNumControlIo(numCOut, false);
+		ASSERT_EQ(g.getNumControlIo(false), numCOut);
+		ASSERT_EQ(out->getNumControlIo(true), numCOut);
+		ASSERT_EQ(in->getNumControlIo(false), numCIn);
 	}
 }
 
@@ -184,9 +150,9 @@ TEST(Graph, Connections)
 	auto res = g.addConnection({ in->getId(), 0, id, 0, Graph::Connection::Audio });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
-	g.setNumAudioInputs(1);
+	g.setNumAudioIo(2, true);
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(id));
-	gain->setNumChannels(5);
+	gain->setNumAudioIo(5, true);
 	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
@@ -198,10 +164,10 @@ TEST(Graph, Connections)
 	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
-	g.setNumControlInputs(3);
+	g.setNumControlIo(3, true);
 	id = g.addModule(std::make_unique<Graph>());
 	auto* graph = dynamic_cast<Graph*>(g.getModuleById(id));
-	graph->setNumControlInputs(9);
+	graph->setNumControlIo(9, true);
 	res = g.addConnection({ in->getId(), 1, id, 7, Graph::Connection::Control });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 2);

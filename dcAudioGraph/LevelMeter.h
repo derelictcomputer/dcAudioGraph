@@ -12,11 +12,12 @@ namespace dc
 class LevelMeter : public Module
 {
 public:
-	LevelMeter() = default;
+	LevelMeter();
 
 	float getLevel(size_t channel);
 
-	void setNumChannels(size_t numChannels);
+	void setNumAudioIo(size_t num, bool isInput) override;
+	void setNumControlIo(size_t num, bool isInput) override {}
 
 protected:
 	void process() override;

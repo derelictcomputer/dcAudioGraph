@@ -37,10 +37,8 @@ public:
 	void setBlockSize(size_t blockSize);
 	void setSampleRate(double sampleRate);
 
-	void setNumAudioInputs(size_t count);
-	void setNumAudioOutputs(size_t count);
-	void setNumControlInputs(size_t count);
-	void setNumControlOutputs(size_t count);
+	void setNumAudioIo(size_t num, bool isInput) override;
+	void setNumControlIo(size_t num, bool isInput) override;
 
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
 
@@ -62,8 +60,6 @@ public:
 
 protected:
 	void process() override;
-	void audioIoCountChanged() override;
-	void controlIoCountChanged() override;
 
 private:
 	// Just a passthrough for processing graph I/O
