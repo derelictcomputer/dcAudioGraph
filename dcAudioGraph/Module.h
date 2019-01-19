@@ -19,7 +19,6 @@
 #include "AudioBuffer.h"
 #include "ControlBuffer.h"
 #include "ModuleParam.h"
-#include "PointerSwapper.h"
 
 namespace dc
 {
