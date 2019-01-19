@@ -402,7 +402,7 @@ void dc::Graph::processModule(Module& m)
 				{
 				case Connection::Audio:
 				{
-					if (c.fromIdx < upstream->getNumAudioIo(false))
+					if (c.fromIdx < upstream->_audioBuffer.getNumChannels())
 					{
 						m._audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
 					}
@@ -410,7 +410,7 @@ void dc::Graph::processModule(Module& m)
 				}
 				case Connection::Control: 
 				{
-					if (c.fromIdx < upstream->getNumControlIo(false))
+					if (c.fromIdx < upstream->_controlBuffer.getNumChannels())
 					{
 						m._controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
 					}

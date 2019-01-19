@@ -30,7 +30,8 @@ void dc::LevelMeter::setNumAudioIo(size_t num, bool isInput)
 
 void dc::LevelMeter::process()
 {
-	const size_t nChannels = getNumAudioIo(true);
+	const size_t nChannels = _audioBuffer.getNumChannels();
+
 	while (nChannels < _levels.size())
 	{
 		_levels.pop_back();
