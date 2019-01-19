@@ -2,7 +2,7 @@
 
 dc::LevelMeter::LevelMeter()
 {
-	_levels.reserve(_maxAudioChannels);
+	_levels.reserve(maxAudioChannels);
 }
 
 float dc::LevelMeter::getLevel(size_t channel)

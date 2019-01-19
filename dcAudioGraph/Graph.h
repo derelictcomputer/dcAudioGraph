@@ -34,7 +34,7 @@ public:
 
 	Graph();
 
-	void setBlockSize(size_t blockSize);
+	bool setBlockSize(size_t blockSize);
 	void setSampleRate(double sampleRate);
 
 	void setNumAudioIo(size_t num, bool isInput) override;

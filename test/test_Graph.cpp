@@ -117,8 +117,8 @@ TEST(Graph, SetNumIo)
 	ASSERT_EQ(g.getNumControlIo(false), 0);
 	{
 		const size_t numAIn = 5;
-		const size_t numAOut = 17;
-		const size_t numCIn = 99;
+		const size_t numAOut = 13;
+		const size_t numCIn = 7;
 		const size_t numCOut = 3;
 		auto* in = g.getInputModule();
 		auto* out = g.getOutputModule();

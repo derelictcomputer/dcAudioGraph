@@ -2,18 +2,18 @@
 #include "Module.h"
 
 dc::Module::Module() :
-_maxBlockSize(DEFAULT_MAX_BLOCK_SIZE),
-_maxAudioChannels(DEFAULT_MAX_AUDIO_CHANNELS),
-_maxControlChannels(DEFAULT_MAX_CONTROL_CHANNELS)
+maxBlockSize(DEFAULT_MAX_BLOCK_SIZE),
+maxAudioChannels(DEFAULT_MAX_AUDIO_CHANNELS),
+maxControlChannels(DEFAULT_MAX_CONTROL_CHANNELS)
 {
 	// reserve a large audio buffer so we don't reallocate in the audio thread
-	_audioBuffer.resize(_maxBlockSize, _maxAudioChannels);
-	_controlBuffer.setNumChannels(_maxControlChannels);
+	_audioBuffer.resize(maxBlockSize, maxAudioChannels);
+	_controlBuffer.setNumChannels(maxControlChannels);
 
-	_audioInputs.reserve(_maxAudioChannels);
-	_audioOutputs.reserve(_maxAudioChannels);
-	_controlInputs.reserve(_maxControlChannels);
-	_controlOutputs.reserve(_maxControlChannels);
+	_audioInputs.reserve(maxAudioChannels);
+	_audioOutputs.reserve(maxAudioChannels);
+	_controlInputs.reserve(maxControlChannels);
+	_controlOutputs.reserve(maxControlChannels);
 	_params.reserve(16);
 }
 
@@ -24,6 +24,8 @@ size_t dc::Module::getNumAudioIo(bool isInput) const
 
 void dc::Module::setNumAudioIo(size_t num, bool isInput)
 {
+	num = std::min(num, maxAudioChannels);
+
 	while (num < getNumAudioIo(isInput))
 	{
 		removeAudioIo(getNumAudioIo(isInput) - 1, isInput);
@@ -50,6 +52,8 @@ size_t dc::Module::getNumControlIo(bool isInput) const
 
 void dc::Module::setNumControlIo(size_t num, bool isInput)
 {
+	num = std::min(num, maxControlChannels);
+
 	while (num < getNumControlIo(isInput))
 	{
 		removeControlIo(getNumControlIo(isInput) - 1, isInput);
@@ -90,8 +94,13 @@ dc::ModuleParam* dc::Module::getParamById(const std::string& id)
 	return nullptr;
 }
 
-void dc::Module::addAudioIo(bool isInput)
+bool dc::Module::addAudioIo(bool isInput)
 {
+	if (getNumAudioIo(isInput) == maxAudioChannels)
+	{
+		return false;
+	}
+
 	if (isInput)
 	{
 		_audioInputs.emplace_back("audio");
@@ -102,6 +111,8 @@ void dc::Module::addAudioIo(bool isInput)
 		_audioOutputs.emplace_back("audio");
 		_numAudioOutputs = _audioOutputs.size();
 	}
+
+	return true;
 }
 
 void dc::Module::removeAudioIo(size_t index, bool isInput)
@@ -114,9 +125,8 @@ void dc::Module::removeAudioIo(size_t index, bool isInput)
 			_numAudioInputs = _audioInputs.size();
 		}
 	}
-	else
+	else if (index < _audioOutputs.size())
 	{
-		if (index < _audioOutputs.size())
 		{
 			_audioOutputs.erase(_audioOutputs.begin() + index);
 			_numAudioOutputs = _audioOutputs.size();
@@ -124,8 +134,13 @@ void dc::Module::removeAudioIo(size_t index, bool isInput)
 	}
 }
 
-void dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
+bool dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
 {
+	if (getNumControlIo(isInput) == maxControlChannels)
+	{
+		return false;
+	}
+
 	if (isInput)
 	{
 		_controlInputs.emplace_back("control", typeFlags);
@@ -136,6 +151,8 @@ void dc::Module::addControlIo(bool isInput, ControlMessage::Type typeFlags)
 		_controlOutputs.emplace_back("control", typeFlags);
 		_numControlOutputs = _controlOutputs.size();
 	}
+
+	return true;
 }
 
 void dc::Module::removeControlIo(size_t index, bool isInput)
@@ -148,9 +165,8 @@ void dc::Module::removeControlIo(size_t index, bool isInput)
 			_numControlInputs = _controlInputs.size();
 		}
 	}
-	else
+	else if (index < _controlOutputs.size())
 	{
-		if (index < _controlOutputs.size())
 		{
 			_controlOutputs.erase(_controlOutputs.begin() + index);
 			_numControlOutputs = _controlOutputs.size();

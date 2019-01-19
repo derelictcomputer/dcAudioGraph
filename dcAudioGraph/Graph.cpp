@@ -16,8 +16,13 @@ dc::Graph::Graph()
 	_output._id = _nextModuleId++;
 }
 
-void dc::Graph::setBlockSize(size_t blockSize)
+bool dc::Graph::setBlockSize(size_t blockSize)
 {
+	if (blockSize > maxBlockSize)
+	{
+		return false;
+	}
+
 	_blockSize = blockSize;
 	_input._blockSize = blockSize;
 	_output._blockSize = blockSize;
@@ -25,6 +30,8 @@ void dc::Graph::setBlockSize(size_t blockSize)
 	{
 		m->_blockSize = blockSize;
 	}
+
+	return true;
 }
 
 void dc::Graph::setSampleRate(double sampleRate)
@@ -40,27 +47,26 @@ void dc::Graph::setSampleRate(double sampleRate)
 
 void dc::Graph::setNumAudioIo(size_t num, bool isInput)
 {
-	while (num < getNumAudioIo(isInput))
+	Module::setNumAudioIo(num, isInput);
+
+	if (isInput)
 	{
-		const size_t idx = getNumAudioIo(isInput) - 1;
-		removeAudioIo(idx, isInput);
-		if (isInput)
+		while (getNumAudioIo(true) < _input.getNumAudioIo(false))
 		{
-			_input.removeAudioIo(idx, false);
+			_input.removeAudioIo(_input.getNumAudioIo(false) - 1, false);
 		}
-		else
-		{
-			_output.removeAudioIo(idx, true);
-		}
-	}
-	while (num > getNumAudioIo(isInput))
-	{
-		addAudioIo(isInput);
-		if (isInput)
+		while (getNumAudioIo(true) > _input.getNumAudioIo(false))
 		{
 			_input.addAudioIo(false);
 		}
-		else
+	}
+	else
+	{
+		while (getNumAudioIo(false) < _output.getNumAudioIo(true))
+		{
+			_output.removeAudioIo(_output.getNumAudioIo(true), true);
+		}
+		while (getNumAudioIo(false) > _output.getNumAudioIo(true))
 		{
 			_output.addAudioIo(true);
 		}
@@ -69,27 +75,26 @@ void dc::Graph::setNumAudioIo(size_t num, bool isInput)
 
 void dc::Graph::setNumControlIo(size_t num, bool isInput)
 {
-	while (num < getNumControlIo(isInput))
+	Module::setNumControlIo(num, isInput);
+
+	if (isInput)
 	{
-		const size_t idx = getNumControlIo(isInput) - 1;
-		removeControlIo(idx, isInput);
-		if (isInput)
+		while (getNumControlIo(true) < _input.getNumControlIo(false))
 		{
-			_input.removeControlIo(idx, false);
+			_input.removeControlIo(_input.getNumControlIo(false) - 1, false);
 		}
-		else
-		{
-			_output.removeControlIo(idx, true);
-		}
-	}
-	while (num > getNumControlIo(isInput))
-	{
-		addControlIo(isInput, ControlMessage::All);
-		if (isInput)
+		while (getNumControlIo(true) > _input.getNumControlIo(false))
 		{
 			_input.addControlIo(false, ControlMessage::All);
 		}
-		else
+	}
+	else
+	{
+		while (getNumControlIo(false) < _output.getNumControlIo(true))
+		{
+			_output.removeControlIo(_output.getNumControlIo(true), true);
+		}
+		while (getNumControlIo(false) > _output.getNumControlIo(true))
 		{
 			_output.addControlIo(true, ControlMessage::All);
 		}
@@ -98,6 +103,7 @@ void dc::Graph::setNumControlIo(size_t num, bool isInput)
 
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
 {
+	// update our buffer sizes if needed
 	updateBuffers();
 
 	// increment the graph revision (if this is the top level graph)

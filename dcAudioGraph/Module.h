@@ -71,9 +71,9 @@ public:
 
 	size_t getId() const { return _id; }
 
-	const size_t _maxBlockSize;
-	const size_t _maxAudioChannels;
-	const size_t _maxControlChannels;
+	const size_t maxBlockSize;
+	const size_t maxAudioChannels;
+	const size_t maxControlChannels;
 
 	size_t getBlockSize() const { return _blockSize; }
 	double getSampleRate() const { return _sampleRate; }
@@ -90,9 +90,9 @@ public:
 	ModuleParam* getParamById(const std::string& id);
 
 protected:
-	void addAudioIo(bool isInput);
+	bool addAudioIo(bool isInput);
 	void removeAudioIo(size_t index, bool isInput);
-	void addControlIo(bool isInput, ControlMessage::Type typeFlags);
+	bool addControlIo(bool isInput, ControlMessage::Type typeFlags);
 	void removeControlIo(size_t index, bool isInput);
 
 	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range, 
