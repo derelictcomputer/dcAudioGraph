@@ -10,14 +10,6 @@ bool dc::Connection::operator==(const Connection& other) const
 		type == other.type;
 }
 
-void dc::GraphProcessor::setInputBuffers(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
-{
-	_audioBuffer.zero();
-	_audioBuffer.copyFrom(audioBuffer, false);
-	_controlBuffer.clear();
-	_controlBuffer.merge(controlBuffer);
-}
-
 bool dc::GraphProcessor::pushGraphMessage(const GraphProcessorMessage& msg)
 {
 	return _graphMessageQueue.push(msg);
@@ -25,9 +17,16 @@ bool dc::GraphProcessor::pushGraphMessage(const GraphProcessorMessage& msg)
 
 void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
+	handleMessages();
 	handleGraphMessages();
 
-	_input->process();
+	_input->handleMessages();
+	_output->handleMessages();
+	for (auto p : _processors)
+	{
+		p->handleMessages();
+	}
+
 	_input->_audioBuffer.copyFrom(audioBuffer, false);
 	_input->_controlBuffer.clear();
 	_input->_controlBuffer.merge(controlBuffer);
@@ -194,13 +193,7 @@ void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, 
 		_graphProcessor->incRev();
 	}
 
-	_graphProcessor->setInputBuffers(audioBuffer, controlBuffer);
-
-	_processor->process();
-
-	audioBuffer.copyFrom(_processor->_audioBuffer, false);
-	controlBuffer.clear();
-	controlBuffer.merge(_processor->_controlBuffer);
+	_graphProcessor->process(audioBuffer, controlBuffer);
 }
 
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
@@ -350,6 +343,16 @@ void dc::Graph::disconnectModule(size_t id)
 				++i;
 			}
 		}
+	}
+}
+
+void dc::Graph::blockSizeChanged()
+{
+	_input.setBlockSize(_blockSize);
+	_output.setBlockSize(_blockSize);
+	for (auto& m : _modules)
+	{
+		m->setBlockSize(_blockSize);
 	}
 }
 

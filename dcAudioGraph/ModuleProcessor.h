@@ -62,6 +62,7 @@ public:
 
 	void process();
 	bool pushMessage(const ModuleProcessorMessage& msg);
+	void handleMessages();
 
 protected:
 	virtual void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) = 0;
@@ -84,7 +85,6 @@ protected:
 	float getControlInputScale(size_t index);
 
 private:
-	void handleMessages();
 	void refreshAudioBuffer();
 	void refreshControlBuffer();
 

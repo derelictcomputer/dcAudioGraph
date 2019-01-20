@@ -23,10 +23,13 @@ void dc::Module::setBlockSize(size_t blockSize)
 	}
 
 	_blockSize = blockSize;
+
 	ModuleProcessorMessage msg{};
 	msg.type = ModuleProcessorMessage::BlockSize;
 	msg.sizeParam = blockSize;
 	_processor->pushMessage(msg);
+
+	blockSizeChanged();
 }
 
 size_t dc::Module::getNumIo(IoType typeFlags) const
@@ -326,6 +329,12 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 		}
 
 		_params.emplace_back(id, displayName, range, serializable, inputIdx);
+
+		ModuleProcessorMessage msg{};
+		msg.type = ModuleProcessorMessage::NumParams;
+		msg.sizeParam = _params.size();
+		_processor->pushMessage(msg);
+
 		return true;
 	}
 	return false;
@@ -336,6 +345,12 @@ bool dc::Module::removeParam(size_t index)
 	if (index < _params.size())
 	{
 		_params.erase(_params.begin() + index);
+
+		ModuleProcessorMessage msg{};
+		msg.type = ModuleProcessorMessage::NumParams;
+		msg.sizeParam = _params.size();
+		_processor->pushMessage(msg);
+
 		return true;
 	}
 	return false;

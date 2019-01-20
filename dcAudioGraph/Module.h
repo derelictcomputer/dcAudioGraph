@@ -69,6 +69,8 @@ public:
 	void setParamValue(const std::string& id, float value);
 
 protected:
+	virtual void blockSizeChanged() {}
+
 	// I/O
 	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
 	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType);

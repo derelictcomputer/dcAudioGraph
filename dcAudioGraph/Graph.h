@@ -55,12 +55,11 @@ class GraphProcessor : public ModuleProcessor
 {
 public:
 	void incRev() { ++_rev; }
-	void setInputBuffers(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer);
 	bool pushGraphMessage(const GraphProcessorMessage& msg);
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
 
 private:
 	void handleGraphMessages();
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
 	void processModule(ModuleProcessor* proc);
 	ModuleProcessor* getModuleById(size_t id);
 	bool getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections);
@@ -109,6 +108,7 @@ private:
 		GraphIoModule() : Module(std::make_unique<DummyProcessor>()) {}
 	};
 
+	void blockSizeChanged() override;
 	bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType) override;
 	bool removeIoInternal(std::vector<Io>& io, size_t index) override;
 

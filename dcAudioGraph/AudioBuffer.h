@@ -82,5 +82,6 @@ private:
 	float* _data = nullptr;
 	size_t _numSamples = 0;
 	size_t _numChannels = 0;
+	size_t _allocatedSize = 0;
 };
 }

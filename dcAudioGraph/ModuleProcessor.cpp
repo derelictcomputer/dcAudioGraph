@@ -1,9 +1,9 @@
 #include "ModuleProcessor.h"
 #include <algorithm>
 
-dc::ModuleProcessor::ModuleProcessor()
+dc::ModuleProcessor::ModuleProcessor() :
+	_audioBuffer(MODULE_DEFAULT_MAX_BLOCK_SIZE, MODULE_DEFAULT_MAX_IO)
 {
-	_audioBuffer.resize(MODULE_DEFAULT_MAX_BLOCK_SIZE, MODULE_DEFAULT_MAX_IO);
 	_controlBuffer.setNumChannels(MODULE_DEFAULT_MAX_IO);
 	_paramValues.reserve(MODULE_DEFAULT_MAX_PARAMS);
 	_controlInputScaleValues.reserve(MODULE_DEFAULT_MAX_IO);
@@ -11,31 +11,12 @@ dc::ModuleProcessor::ModuleProcessor()
 
 void dc::ModuleProcessor::process()
 {
-	handleMessages();
 	process(_audioBuffer, _controlBuffer);
 }
 
 bool dc::ModuleProcessor::pushMessage(const ModuleProcessorMessage& msg)
 {
 	return _messageQueue.push(msg);
-}
-
-float dc::ModuleProcessor::getParamValue(size_t index)
-{
-	if (index < _paramValues.size())
-	{
-		return _paramValues[index];
-	}
-	return 0.0f;
-}
-
-float dc::ModuleProcessor::getControlInputScale(size_t index)
-{
-	if (index < _controlInputScaleValues.size())
-	{
-		return _controlInputScaleValues[index];
-	}
-	return 0.0f;
 }
 
 void dc::ModuleProcessor::handleMessages()
@@ -98,6 +79,24 @@ void dc::ModuleProcessor::handleMessages()
 		default:;
 		}
 	}
+}
+
+float dc::ModuleProcessor::getParamValue(size_t index)
+{
+	if (index < _paramValues.size())
+	{
+		return _paramValues[index];
+	}
+	return 0.0f;
+}
+
+float dc::ModuleProcessor::getControlInputScale(size_t index)
+{
+	if (index < _controlInputScaleValues.size())
+	{
+		return _controlInputScaleValues[index];
+	}
+	return 0.0f;
 }
 
 void dc::ModuleProcessor::refreshAudioBuffer()
