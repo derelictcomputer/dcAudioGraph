@@ -1,7 +1,7 @@
 #include "Graph.h"
 #include <algorithm>
 
-bool dc::Graph::Connection::operator==(const Connection& other) const
+bool dc::Connection::operator==(const Connection& other) const
 {
 	return fromId == other.fromId &&
 		fromIdx == other.fromIdx &&
@@ -10,126 +10,190 @@ bool dc::Graph::Connection::operator==(const Connection& other) const
 		type == other.type;
 }
 
-dc::Graph::Graph()
+bool dc::GraphProcessor::pushGraphMessage(const GraphProcessorMessage& msg)
 {
-	_input._id = _nextModuleId++;
-	_output._id = _nextModuleId++;
+	return _graphMessageQueue.push(msg);
 }
 
-bool dc::Graph::setBlockSize(size_t blockSize)
+void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
-	if (blockSize > maxBlockSize)
+	handleMessages();
+	handleGraphMessages();
+
+	_input->handleMessages();
+	_output->handleMessages();
+	for (auto p : _processors)
 	{
-		return false;
+		p->handleMessages();
 	}
 
-	_blockSize = blockSize;
-	_input._blockSize = blockSize;
-	_output._blockSize = blockSize;
-	for (auto& m : _modules)
-	{
-		m->_blockSize = blockSize;
-	}
+	_input->_audioBuffer.copyFrom(audioBuffer, false);
+	_input->_controlBuffer.clear();
+	_input->_controlBuffer.merge(controlBuffer);
 
-	return true;
+	processModule(_output);
+
+	audioBuffer.copyFrom(_output->_audioBuffer, false);
+	controlBuffer.clear();
+	controlBuffer.merge(_output->_controlBuffer);
 }
 
-void dc::Graph::setSampleRate(double sampleRate)
+void dc::GraphProcessor::processModule(ModuleProcessor* proc)
 {
-	_sampleRate = sampleRate;
-	_input._sampleRate = sampleRate;
-	_output._sampleRate = sampleRate;
-	for (auto& m : _modules)
+	if (proc->_rev == _rev)
 	{
-		m->_sampleRate = sampleRate;
+		return;
+	}
+	proc->_rev = _rev;
+
+	std::vector<Connection> connections;
+	if (getInputConnectionsForModule(proc, connections))
+	{
+		// process upstream modules
+		for (auto& c : connections)
+		{
+			if (auto* upstream = getModuleById(c.fromId))
+			{
+				processModule(upstream);
+			}
+		}
+
+		// pull in control and audio
+		proc->_audioBuffer.zero();
+		proc->_controlBuffer.clear();
+
+		for (auto& c : connections)
+		{
+			if (auto* upstream = getModuleById(c.fromId))
+			{
+				switch (c.type)
+				{
+				case Connection::Audio:
+				{
+					if (c.fromIdx < upstream->_audioBuffer.getNumChannels())
+					{
+						proc->_audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
+					}
+					break;
+				}
+				case Connection::Control:
+				{
+					if (c.fromIdx < upstream->_controlBuffer.getNumChannels())
+					{
+						proc->_controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
+					}
+					break;
+				}
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	proc->process();
+}
+
+dc::ModuleProcessor* dc::GraphProcessor::getModuleById(size_t id)
+{
+	if (_input->_id == id)
+	{
+		return _input;
+	}
+
+	if (_output->_id == id)
+	{
+		return _output;
+	}
+
+	for (auto proc : _processors)
+	{
+		if (proc->_id == id)
+		{
+			return proc;
+		}
+	}
+
+	return nullptr;
+}
+
+bool dc::GraphProcessor::getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections)
+{
+	for (auto& c : _connections)
+	{
+		if (c.toId == proc->_id)
+		{
+			connections.push_back(c);
+		}
+	}
+	return !connections.empty();
+}
+
+void dc::GraphProcessor::handleGraphMessages()
+{
+	GraphProcessorMessage msg{};
+	while (_graphMessageQueue.pop(msg))
+	{
+		switch (msg.type)
+		{
+		case GraphProcessorMessage::InputModule:
+			_input = msg.moduleParam;
+			break;
+		case GraphProcessorMessage::OutputModule:
+			_output = msg.moduleParam;
+			break;
+		case GraphProcessorMessage::AddModule: 
+			_processors.push_back(msg.moduleParam);
+			break;
+		case GraphProcessorMessage::RemoveModule: 
+			if (msg.sizeParam < _processors.size())
+			{
+				_processors.erase(_processors.begin() + msg.sizeParam);
+			}
+			break;
+		case GraphProcessorMessage::AddConnection: 
+			_connections.emplace_back(msg.connectionParam);
+			break;
+		case GraphProcessorMessage::RemoveConnection: 
+			if (msg.sizeParam < _connections.size())
+			{
+				_connections.erase(_connections.begin() + msg.sizeParam);
+			}
+			break;
+		default: ;
+		}
 	}
 }
 
-void dc::Graph::setNumAudioIo(size_t num, bool isInput)
+dc::Graph::Graph() :
+	Module(std::make_unique<GraphProcessor>()),
+	_graphProcessor(dynamic_cast<GraphProcessor*>(_processor.get()))
 {
-	Module::setNumAudioIo(num, isInput);
+	GraphProcessorMessage msg{};
+	{
+		msg.type = GraphProcessorMessage::InputModule;
+		msg.moduleParam = _input._processor.get();
+		_graphProcessor->pushGraphMessage(msg);
 
-	if (isInput)
-	{
-		while (getNumAudioIo(true) < _input.getNumAudioIo(false))
-		{
-			_input.removeAudioIo(_input.getNumAudioIo(false) - 1, false);
-		}
-		while (getNumAudioIo(true) > _input.getNumAudioIo(false))
-		{
-			_input.addAudioIo(false);
-		}
+		_input.setId(_nextModuleId++);
 	}
-	else
 	{
-		while (getNumAudioIo(false) < _output.getNumAudioIo(true))
-		{
-			_output.removeAudioIo(_output.getNumAudioIo(true), true);
-		}
-		while (getNumAudioIo(false) > _output.getNumAudioIo(true))
-		{
-			_output.addAudioIo(true);
-		}
-	}
-}
+		msg.type = GraphProcessorMessage::OutputModule;
+		msg.moduleParam = _output._processor.get();
+		_graphProcessor->pushGraphMessage(msg);
 
-void dc::Graph::setNumControlIo(size_t num, bool isInput)
-{
-	Module::setNumControlIo(num, isInput);
-
-	if (isInput)
-	{
-		while (getNumControlIo(true) < _input.getNumControlIo(false))
-		{
-			_input.removeControlIo(_input.getNumControlIo(false) - 1, false);
-		}
-		while (getNumControlIo(true) > _input.getNumControlIo(false))
-		{
-			_input.addControlIo(false, ControlMessage::All);
-		}
-	}
-	else
-	{
-		while (getNumControlIo(false) < _output.getNumControlIo(true))
-		{
-			_output.removeControlIo(_output.getNumControlIo(true), true);
-		}
-		while (getNumControlIo(false) > _output.getNumControlIo(true))
-		{
-			_output.addControlIo(true, ControlMessage::All);
-		}
+		_output.setId(_nextModuleId++);
 	}
 }
 
 void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
 {
-	// update our buffer sizes if needed
-	updateBuffers();
-
-	// increment the graph revision (if this is the top level graph)
 	if (incrementRev)
 	{
-		++_rev;
+		_graphProcessor->incRev();
 	}
 
-	// copy the input to the input module
-	{
-		_input._audioBuffer.copyFrom(audioBuffer, false);
-		_input._controlBuffer.clear();
-		_input._controlBuffer.merge(controlBuffer);
-	}
-
-	// pull through audio and control
-	{
-		processModule(_output);
-	}
-
-	// copy the output from the output module
-	{
-		audioBuffer.copyFrom(_output._audioBuffer, false);
-		controlBuffer.clear();
-		controlBuffer.merge(_output._controlBuffer);
-	}
+	_graphProcessor->process(audioBuffer, controlBuffer);
 }
 
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
@@ -139,11 +203,19 @@ size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 		return 0;
 	}
 
-	module->_blockSize.store(_blockSize.load());
-	module->_sampleRate.store(_sampleRate.load());
+	module->setBlockSize(_blockSize);
+	module->setSampleRate(_sampleRate);
+
 	const size_t id = _nextModuleId++;
-	module->_id = id;
+	module->setId(id);
+	
 	_modules.push_back(std::move(module));
+
+	GraphProcessorMessage msg{};
+	msg.type = GraphProcessorMessage::AddModule;
+	msg.moduleParam = _modules[_modules.size() - 1]->_processor.get();
+	_graphProcessor->pushGraphMessage(msg);
+
 	return id;
 }
 
@@ -170,7 +242,7 @@ dc::Module* dc::Graph::getModuleById(size_t id)
 
 	for (auto& m : _modules)
 	{
-		if (m->_id == id)
+		if (m->getId() == id)
 		{
 			return m.get();
 		}
@@ -183,6 +255,12 @@ void dc::Graph::removeModuleAt(size_t index)
 	if (index < _modules.size())
 	{
 		disconnectModule(_modules[index]->_id);
+
+		GraphProcessorMessage msg{};
+		msg.type = GraphProcessorMessage::RemoveModule;
+		msg.sizeParam = index;
+		_graphProcessor->pushGraphMessage(msg);
+
 		_modules.erase(_modules.begin() + index);
 	}
 }
@@ -191,7 +269,7 @@ void dc::Graph::removeModuleById(size_t id)
 {
 	for (size_t i = 0; i < _modules.size(); ++i)
 	{
-		if (_modules[i]->_id == id)
+		if (_modules[i]->getId() == id)
 		{
 			removeModuleAt(i);
 			return;
@@ -206,6 +284,11 @@ bool dc::Graph::addConnection(const Connection& connection)
 		return false;
 	}
 
+	GraphProcessorMessage msg{};
+	msg.type = GraphProcessorMessage::AddConnection;
+	msg.connectionParam = connection;
+	_graphProcessor->pushGraphMessage(msg);
+
 	_allConnections.push_back(connection);
 
 	return true;
@@ -218,16 +301,20 @@ void dc::Graph::removeConnection(const Connection& connection)
 		return;
 	}
 
-	for (auto it = _allConnections.begin(); it != _allConnections.end(); ++it)
+	for (size_t i = 0; i < _allConnections.size(); ++i)
 	{
-		if (*it == connection)
+		if (_allConnections[i] == connection)
 		{
-			_allConnections.erase(it);
+			GraphProcessorMessage msg{};
+			msg.type = GraphProcessorMessage::RemoveConnection;
+			msg.sizeParam = i;
+			_graphProcessor->pushGraphMessage(msg);
+
+			_allConnections.erase(_allConnections.begin() + i);
 			break;
 		}
 	}
 }
-
 
 bool dc::Graph::getConnection(size_t index, Connection& connectionOut)
 {
@@ -259,9 +346,68 @@ void dc::Graph::disconnectModule(size_t id)
 	}
 }
 
-void dc::Graph::process()
+void dc::Graph::blockSizeChanged()
 {
-	process(_audioBuffer, _controlBuffer, false);
+	_input.setBlockSize(_blockSize);
+	_output.setBlockSize(_blockSize);
+	for (auto& m : _modules)
+	{
+		m->setBlockSize(_blockSize);
+	}
+}
+
+bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType)
+{
+	if (!Module::addIoInternal(io, description, controlType))
+	{
+		return false;
+	}
+
+	if (&io == &_audioInputs)
+	{
+		return _input.addIo(Audio | Output, description, controlType);
+	}
+	if (&io == &_audioOutputs)
+	{
+		return _output.addIo(Audio | Input, description, controlType);
+	}
+	if (&io == &_controlInputs)
+	{
+		return _input.addIo(Control | Output, description, controlType);
+	}
+	if (&io == &_controlOutputs)
+	{
+		return _output.addIo(Control | Input, description, controlType);
+	}
+
+	return false;
+}
+
+bool dc::Graph::removeIoInternal(std::vector<Io>& io, size_t index)
+{
+	if (!Module::removeIoInternal(io, index))
+	{
+		return false;
+	}
+
+	if (&io == &_audioInputs)
+	{
+		return _input.removeIo(Audio | Output, index);
+	}
+	if (&io == &_audioOutputs)
+	{
+		return _output.removeIo(Audio | Input, index);
+	}
+	if (&io == &_controlInputs)
+	{
+		return _input.removeIo(Control | Output, index);
+	}
+	if (&io == &_controlOutputs)
+	{
+		return _output.removeIo(Control | Input, index);
+	}
+
+	return false;
 }
 
 bool dc::Graph::connectionIsValid(const Connection& connection)
@@ -283,7 +429,7 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 	{
 	case Connection::Audio: 
 	{
-		if (connection.fromIdx >= from->getNumAudioIo(false) || connection.toIdx >= to->getNumAudioIo(true))
+		if (connection.fromIdx >= from->getNumIo(Audio | Output) || connection.toIdx >= to->getNumIo(Audio | Input))
 		{
 			return false;
 		}
@@ -291,15 +437,9 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 	}
 	case Connection::Control: 
 	{
-		auto* fromOut = from->getControlIoAt(connection.fromIdx, false);
-		auto* toIn = to->getControlIoAt(connection.toIdx, true);
-
-		if (nullptr == fromOut || nullptr == toIn)
-		{
-			return false;
-		}
-
-		if ((fromOut->getTypeFlags() & toIn->getTypeFlags()) == 0)
+		const auto fromFlags = from->getControlIoFlags(connection.fromIdx, false);
+		const auto toFlags = to->getControlIoFlags(connection.toIdx, true);
+		if ((fromFlags & toFlags) == 0)
 		{
 			return false;
 		}
@@ -372,64 +512,6 @@ bool dc::Graph::moduleIsInputTo(Module* from, Module* to)
 	}
 
 	return false;
-}
-
-void dc::Graph::processModule(Module& m)
-{
-	if (m._rev == _rev)
-	{
-		return;
-	}
-	m._rev = _rev;
-
-	m.updateBuffers();
-
-	std::vector<Connection> connections;
-	if (getInputConnectionsForModule(m, connections))
-	{
-		// process upstream modules
-		for (auto& c : connections)
-		{
-			if (auto* upstream = getModuleById(c.fromId))
-			{
-				processModule(*upstream);
-			}
-		}
-
-		// pull in control and audio
-		m._audioBuffer.zero();
-		m._controlBuffer.clear();
-
-		for (auto& c : connections)
-		{
-			if (auto* upstream = getModuleById(c.fromId))
-			{
-				switch (c.type)
-				{
-				case Connection::Audio:
-				{
-					if (c.fromIdx < upstream->_audioBuffer.getNumChannels())
-					{
-						m._audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
-					}
-					break;
-				}
-				case Connection::Control: 
-				{
-					if (c.fromIdx < upstream->_controlBuffer.getNumChannels())
-					{
-						m._controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
-					}
-					break;
-				}
-				default:
-					break;
-				}
-			}
-		}
-	}
-
-	m.process();
 }
 
 bool dc::Graph::getInputConnectionsForModule(Module& m, std::vector<Connection>& connections)

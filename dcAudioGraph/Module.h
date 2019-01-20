@@ -1,127 +1,104 @@
-/*
- * This is where most of the work takes place.
- * A module has some number of audio and control I/O,
- * and pulls from anything that is connected to its inputs
- * before processing and passing to modules that are connected
- * to its outputs.
- * 
- * Derive from this to make concrete modules that actually do things
- * to sound and control.
- * 
- * Note: by default, a Module will pass through both audio and control.
- * If you don't want that, make sure to clear the buffers in your onProcess().
- * 
- */
-
 #pragma once
-#include <utility>
-#include <vector>
-#include "AudioBuffer.h"
-#include "ControlBuffer.h"
+
+#include <memory>
 #include "ModuleParam.h"
+#include "ModuleProcessor.h"
 
 namespace dc
 {
-// defaults for buffer and I/O maximums
-const size_t DEFAULT_MAX_BLOCK_SIZE = 1024;
-const size_t DEFAULT_MAX_AUDIO_CHANNELS = 16;
-const size_t DEFAULT_MAX_CONTROL_CHANNELS = 16;
+enum IoType : uint8_t
+{
+	Audio = 0x01,
+	Control = 0x02,
+	Input = 0x04,
+	Output = 0x08
+};
+
+constexpr IoType operator|(const IoType lhs, const IoType rhs)
+{
+	return static_cast<IoType>(static_cast<uint8_t>(lhs) | static_cast<uint8_t>(rhs));
+}
 
 class Module
 {
 public:
-	class Io
+	struct Io
 	{
-	public:
-		explicit Io(std::string description) : _description(std::move(description)) {}
-
-		std::string getDescription() const { return _description; }
-		float getScale() const { return _scale; }
-		void setScale(float scale) { _scale = scale; }
-
-	private:
-		std::string _description;
-		float _scale = 1.0f;
+		std::string description = "";
+		ControlMessage::Type controlTypeFlags = ControlMessage::All;
+		float scale = 1.0f;
 	};
 
-	class ControlIo final : public Io
-	{
-	public:
-		ControlIo(std::string description, ControlMessage::Type typeFlags) : Io(description), _typeFlags(typeFlags) {}
-
-		ControlMessage::Type getTypeFlags() const { return _typeFlags; }
-
-	private:
-		ControlMessage::Type _typeFlags;
-	};
-
-	// let the parent graph reach in here
 	friend class Graph;
 
-	Module();
+	explicit Module(std::unique_ptr<ModuleProcessor> processor);
 	virtual ~Module() = default;
 
-	// TODO: allow copy of modules, it'll be needed for eg. editor applications
-	Module(const Module& other) = delete;
-	Module& operator=(const Module& other) = delete;
-
-	// disallow move
-	Module(Module&& other) = delete;
-	Module& operator=(Module&& other) = delete;
+	Module(const Module&) = delete;
+	Module& operator=(const Module&) = delete;
+	Module(Module&&) = delete;
+	Module& operator=(Module&&) = delete;
 
 	size_t getId() const { return _id; }
 
-	const size_t maxBlockSize;
-	const size_t maxAudioChannels;
-	const size_t maxControlChannels;
-
-	size_t getBlockSize() const { return _blockSize; }
+	void setSampleRate(double sampleRate);
 	double getSampleRate() const { return _sampleRate; }
 
-	size_t getNumAudioIo(bool isInput) const;
-	virtual void setNumAudioIo(size_t num, bool isInput);
-	Io* getAudioIoAt(size_t index, bool isInput);
-	size_t getNumControlIo(bool isInput) const;
-	virtual void setNumControlIo(size_t num, bool isInput);
-	ControlIo* getControlIoAt(size_t index, bool isInput);
+	void setBlockSize(size_t blockSize);
+	size_t getBlockSize() const { return _blockSize; }
 
+	// I/O
+	size_t getNumIo(IoType typeFlags) const;
+	std::string getIoDescription(IoType typeFlags, size_t index);
+	float getControlInputScale(size_t index);
+	void setControlInputScale(size_t index, float value);
+	ControlMessage::Type getControlIoFlags(size_t index, bool isInput);
+	bool setNumIo(IoType typeFlags, size_t n);
+	bool addIo(IoType typeFlags,
+		const std::string& description = "",
+		ControlMessage::Type controlType = ControlMessage::None);
+	bool removeIo(IoType typeFlags, size_t index);
+
+	// Params
 	size_t getNumParams() const { return _params.size(); }
-	ModuleParam* getParamAt(size_t index);
-	ModuleParam* getParamById(const std::string& id);
+	bool getParamRange(size_t index, ParamRange& rangeOut);
+	bool getParamRange(const std::string& id, ParamRange& rangeOut);
+	float getParamValue(size_t index);
+	float getParamValue(const std::string& id);
+	void setParamValue(size_t index, float value);
+	void setParamValue(const std::string& id, float value);
 
 protected:
-	bool addAudioIo(bool isInput);
-	void removeAudioIo(size_t index, bool isInput);
-	bool addControlIo(bool isInput, ControlMessage::Type typeFlags);
-	void removeControlIo(size_t index, bool isInput);
+	virtual void blockSizeChanged() {}
 
-	void addParam(const std::string& id, const std::string& displayName, const ParamRange& range, 
+	// I/O
+	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
+	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType);
+	virtual bool removeIoInternal(std::vector<Io>& io, size_t index);
+
+	// Params
+	bool addParam(const std::string& id, const std::string& displayName,
+		const ParamRange& range,
 		bool serializable = false, bool hasControlInput = false);
-
-	// implement this to do something to audio or control
-	virtual void process() = 0;
-
-	// only touch these in your process method
-	AudioBuffer _audioBuffer;
-	ControlBuffer _controlBuffer;
+	bool removeParam(size_t index);
 
 private:
-	void updateBuffers();
+	void notifyIoChange(IoType typeFlags) const;
+	Io* getIo(IoType typeFlags, size_t index);
+	ModuleParam* getParam(size_t index);
+	ModuleParam* getParam(const std::string& id);
 
+	std::unique_ptr<ModuleProcessor> _processor;
+	double _sampleRate = 0;
+	size_t _blockSize = 0;
 	std::vector<Io> _audioInputs;
 	std::vector<Io> _audioOutputs;
-	std::vector<ControlIo> _controlInputs;
-	std::vector<ControlIo> _controlOutputs;
+	std::vector<Io> _controlInputs;
+	std::vector<Io> _controlOutputs;
 	std::vector<ModuleParam> _params;
 
+	// for the Graph
+	void setId(size_t id);
 	size_t _id = 0;
-	size_t _rev = 0;
-
-	std::atomic<double> _sampleRate{ 0 };
-	std::atomic<size_t> _blockSize{ 0 };
-	std::atomic<size_t> _numAudioInputs{ 0 };
-	std::atomic<size_t> _numAudioOutputs{ 0 };
-	std::atomic<size_t> _numControlInputs{ 0 };
-	std::atomic<size_t> _numControlOutputs{ 0 };
 };
 }

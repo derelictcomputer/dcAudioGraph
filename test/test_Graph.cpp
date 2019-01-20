@@ -10,17 +10,16 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	const auto lmId = g.addModule(std::make_unique<LevelMeter>());
 	auto* lm = dynamic_cast<LevelMeter*>(g.getModuleById(lmId));
 	ASSERT_NE(lm, nullptr);
-	lm->setNumAudioIo(numIo, true);
+	lm->setNumIo(Audio | Input | Output, numIo);
 
 	const auto gId = g.addModule(std::make_unique<Gain>());
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(gId));
 	ASSERT_NE(gain, nullptr);
-	gain->setNumAudioIo(numIo, true);
+	gain->setNumIo(Audio | Input | Output, numIo);
 
-	g.setNumAudioIo(numIo, true);
-	EXPECT_EQ(g.getNumAudioIo(true), numIo);
-	g.setNumAudioIo(numIo, false);
-	EXPECT_EQ(g.getNumAudioIo(false), numIo);
+	g.setNumIo(Audio | Input | Output, numIo);
+	EXPECT_EQ(g.getNumIo(Audio | Input), numIo);
+	EXPECT_EQ(g.getNumIo(Audio | Output), numIo);
 
 	auto* aIn = g.getInputModule();
 	ASSERT_NE(aIn, nullptr);
@@ -31,15 +30,15 @@ void makeBasicGraph(Graph& g, size_t numIo)
 	{
 		bool res;
 		{
-			res = g.addConnection({ aIn->getId(), cIdx, gain->getId(), cIdx, Graph::Connection::Audio });
+			res = g.addConnection({ aIn->getId(), cIdx, gain->getId(), cIdx, Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 		{
-			res = g.addConnection({ gain->getId(), cIdx, lm->getId(), cIdx, Graph::Connection::Audio });
+			res = g.addConnection({ gain->getId(), cIdx, lm->getId(), cIdx, Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 		{
-			res = g.addConnection({ lm->getId(), cIdx, aOut->getId(), cIdx, Graph::Connection::Audio });
+			res = g.addConnection({ lm->getId(), cIdx, aOut->getId(), cIdx, Connection::Audio });
 			EXPECT_TRUE(res);
 		}
 	}
@@ -111,10 +110,10 @@ TEST(Graph, AddRemove)
 TEST(Graph, SetNumIo)
 {
 	Graph g;
-	ASSERT_EQ(g.getNumAudioIo(true), 0);
-	ASSERT_EQ(g.getNumAudioIo(false), 0);
-	ASSERT_EQ(g.getNumControlIo(true), 0);
-	ASSERT_EQ(g.getNumControlIo(false), 0);
+	ASSERT_EQ(g.getNumIo(Audio | Input), 0);
+	ASSERT_EQ(g.getNumIo(Audio | Output), 0);
+	ASSERT_EQ(g.getNumIo(Control | Input), 0);
+	ASSERT_EQ(g.getNumIo(Control | Output), 0);
 	{
 		const size_t numAIn = 5;
 		const size_t numAOut = 13;
@@ -122,22 +121,26 @@ TEST(Graph, SetNumIo)
 		const size_t numCOut = 3;
 		auto* in = g.getInputModule();
 		auto* out = g.getOutputModule();
-		g.setNumAudioIo(numAIn, true);
-		ASSERT_EQ(g.getNumAudioIo(true), numAIn);
-		ASSERT_EQ(in->getNumAudioIo(false), numAIn);
-		ASSERT_EQ(out->getNumAudioIo(true), 0);
-		g.setNumAudioIo(numAOut, false);
-		ASSERT_EQ(g.getNumAudioIo(false), numAOut);
-		ASSERT_EQ(out->getNumAudioIo(true), numAOut);
-		ASSERT_EQ(in->getNumAudioIo(false), numAIn);
-		g.setNumControlIo(numCIn, true);
-		ASSERT_EQ(g.getNumControlIo(true), numCIn);
-		ASSERT_EQ(in->getNumControlIo(false), numCIn);
-		ASSERT_EQ(out->getNumControlIo(true), 0);
-		g.setNumControlIo(numCOut, false);
-		ASSERT_EQ(g.getNumControlIo(false), numCOut);
-		ASSERT_EQ(out->getNumControlIo(true), numCOut);
-		ASSERT_EQ(in->getNumControlIo(false), numCIn);
+		g.setNumIo(Audio | Input, numAIn);
+		ASSERT_EQ(g.getNumIo(Audio | Input), numAIn);
+		ASSERT_EQ(g.getNumIo(Audio | Output), 0);
+		ASSERT_EQ(in->getNumIo(Audio | Output), numAIn);
+		ASSERT_EQ(out->getNumIo(Audio | Input), 0);
+		g.setNumIo(Audio | Output, numAOut);
+		ASSERT_EQ(g.getNumIo(Audio | Input), numAIn);
+		ASSERT_EQ(g.getNumIo(Audio | Output), numAOut);
+		ASSERT_EQ(in->getNumIo(Audio | Output), numAIn);
+		ASSERT_EQ(out->getNumIo(Audio | Input), numAOut);
+		g.setNumIo(Control | Input, numCIn);
+		ASSERT_EQ(g.getNumIo(Control | Input), numCIn);
+		ASSERT_EQ(g.getNumIo(Control | Output), 0);
+		ASSERT_EQ(in->getNumIo(Control | Output), numCIn);
+		ASSERT_EQ(out->getNumIo(Control | Input), 0);
+		g.setNumIo(Control | Output, numCOut);
+		ASSERT_EQ(g.getNumIo(Control | Input), numCIn);
+		ASSERT_EQ(g.getNumIo(Control | Output), numCOut);
+		ASSERT_EQ(in->getNumIo(Control | Output), numCIn);
+		ASSERT_EQ(out->getNumIo(Control | Input), numCOut);
 	}
 }
 
@@ -147,28 +150,28 @@ TEST(Graph, Connections)
 	ASSERT_EQ(g.getNumConnections(), 0);
 	auto* in = g.getInputModule();
 	auto id = g.addModule(std::make_unique<Gain>());
-	auto res = g.addConnection({ in->getId(), 0, id, 0, Graph::Connection::Audio });
+	auto res = g.addConnection({ in->getId(), 0, id, 0, Connection::Audio });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
-	g.setNumAudioIo(2, true);
+	g.setNumIo(Audio | Input, 2);
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(id));
-	gain->setNumAudioIo(5, true);
-	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
+	gain->setNumIo(Audio | Input, 5);
+	res = g.addConnection({ in->getId(), 0, id, 4, Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
-	g.removeConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
+	g.removeConnection({ in->getId(), 0, id, 4, Connection::Audio });
 	ASSERT_EQ(g.getNumConnections(), 0);
-	res = g.addConnection({ in->getId(), 0, id, 0, Graph::Connection::Control });
+	res = g.addConnection({ in->getId(), 0, id, 0, Connection::Control });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
-	res = g.addConnection({ in->getId(), 0, id, 4, Graph::Connection::Audio });
+	res = g.addConnection({ in->getId(), 0, id, 4, Connection::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
-	g.setNumControlIo(3, true);
+	g.setNumIo(Control | Input, 3);
 	id = g.addModule(std::make_unique<Graph>());
 	auto* graph = dynamic_cast<Graph*>(g.getModuleById(id));
-	graph->setNumControlIo(9, true);
-	res = g.addConnection({ in->getId(), 1, id, 7, Graph::Connection::Control });
+	graph->setNumIo(Control | Input, 9);
+	res = g.addConnection({ in->getId(), 1, id, 7, Connection::Control });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 2);
 	g.disconnectModule(id);

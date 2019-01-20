@@ -34,7 +34,7 @@ void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 	}
 
 	// if we're downsizing or keeping the same total size, just change the counts
-	if (numSamples * numChannels <= _numSamples * _numChannels)
+	if (numSamples * numChannels <= _allocatedSize)
 	{
 		_numSamples = numSamples;
 		_numChannels = numChannels;
@@ -49,7 +49,8 @@ void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 	_numChannels = numChannels;
 
 	// allocate the new data
-	_data = static_cast<float*>(malloc(_numSamples * _numChannels * sizeof(float)));
+	_allocatedSize = _numSamples * _numChannels;
+	_data = static_cast<float*>(malloc(_allocatedSize * sizeof(float)));
 }
 
 void dc::AudioBuffer::fill(float value)

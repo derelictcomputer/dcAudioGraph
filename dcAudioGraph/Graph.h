@@ -11,34 +11,70 @@
 
 namespace dc
 {
+struct Connection final
+{
+	enum Type
+	{
+		Audio = 0,
+		Control
+	};
+
+	bool operator==(const Connection& other) const;
+	bool operator!=(const Connection& other) const { return !(*this == other); }
+
+	size_t fromId;
+	size_t fromIdx;
+	size_t toId;
+	size_t toIdx;
+	Type type;
+};
+
+struct GraphProcessorMessage
+{
+	enum Type
+	{
+		InputModule,
+		OutputModule,
+		AddModule,
+		RemoveModule,
+		AddConnection,
+		RemoveConnection
+	};
+
+	Type type;
+
+	union
+	{
+		ModuleProcessor* moduleParam;
+		Connection connectionParam;
+		size_t sizeParam;
+	};
+};
+
+class GraphProcessor : public ModuleProcessor
+{
+public:
+	void incRev() { ++_rev; }
+	bool pushGraphMessage(const GraphProcessorMessage& msg);
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
+
+private:
+	void handleGraphMessages();
+	void processModule(ModuleProcessor* proc);
+	ModuleProcessor* getModuleById(size_t id);
+	bool getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections);
+
+	MessageQueue<GraphProcessorMessage> _graphMessageQueue{ MODULE_MAX_MESSAGES };
+	ModuleProcessor* _input;
+	ModuleProcessor* _output;
+	std::vector<ModuleProcessor*> _processors;
+	std::vector<Connection> _connections;
+};
+
 class Graph final : public Module
 {
 public:
-	struct Connection final
-	{
-		enum Type
-		{
-			Audio = 0,
-			Control
-		};
-
-		bool operator==(const Connection& other) const;
-		bool operator!=(const Connection& other) const { return !(*this == other); }
-
-		size_t fromId;
-		size_t fromIdx;
-		size_t toId;
-		size_t toIdx;
-		Type type;
-	};
-
 	Graph();
-
-	bool setBlockSize(size_t blockSize);
-	void setSampleRate(double sampleRate);
-
-	void setNumAudioIo(size_t num, bool isInput) override;
-	void setNumControlIo(size_t num, bool isInput) override;
 
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
 
@@ -58,17 +94,23 @@ public:
 	bool getConnection(size_t index, Connection& connectionOut);
 	void disconnectModule(size_t id);
 
-protected:
-	void process() override;
-
 private:
 	// Just a passthrough for processing graph I/O
 	// This also provides a way to connect modules in the graph to the outside world
 	class GraphIoModule final : public Module
 	{
-	protected:
-		void process() override {}
+	public:
+		class DummyProcessor : public ModuleProcessor
+		{
+			void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override {}
+		};
+
+		GraphIoModule() : Module(std::make_unique<DummyProcessor>()) {}
 	};
+
+	void blockSizeChanged() override;
+	bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType) override;
+	bool removeIoInternal(std::vector<Io>& io, size_t index) override;
 
 	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);
@@ -76,9 +118,9 @@ private:
 	bool connectionCreatesLoop(const Connection& connection);
 	bool moduleIsInputTo(Module* from, Module* to);
 
-	void processModule(Module& m);
 	bool getInputConnectionsForModule(Module& m, std::vector<Connection>& connections);
 
+	GraphProcessor* _graphProcessor;
 	GraphIoModule _input;
 	GraphIoModule _output;
 	std::vector<std::unique_ptr<Module>> _modules;

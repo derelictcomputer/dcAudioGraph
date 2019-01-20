@@ -10,13 +10,13 @@ namespace dc
 {
 class Gain : public Module
 {
+	class GainProcessor : public ModuleProcessor
+	{
+		void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
+	};
+
 public:
 	Gain();
 
-	void setNumAudioIo(size_t num, bool isInput) override;
-	void setNumControlIo(size_t num, bool isInput) override {}
-
-protected:
-	void process() override;
 };
 }
