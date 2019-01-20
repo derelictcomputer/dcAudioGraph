@@ -1,97 +1,6 @@
 #include <cassert>
 #include "Module.h"
 
-dc::ModuleProcessor::ModuleProcessor()
-{
-	_audioBuffer.resize(MODULE_DEFAULT_MAX_BLOCK_SIZE, MODULE_DEFAULT_MAX_IO);
-	_controlBuffer.setNumChannels(MODULE_DEFAULT_MAX_IO);
-	_paramValues.reserve(MODULE_DEFAULT_MAX_PARAMS);
-	_controlInputScaleValues.reserve(MODULE_DEFAULT_MAX_IO);
-}
-
-void dc::ModuleProcessor::process()
-{
-	handleMessages();
-	process(_audioBuffer, _controlBuffer);
-}
-
-bool dc::ModuleProcessor::pushMessage(const ModuleProcessorMessage& msg)
-{
-	return _messageQueue.push(msg);
-}
-
-float dc::ModuleProcessor::getParamValue(size_t index)
-{
-	if (index < _paramValues.size())
-	{
-		return _paramValues[index];
-	}
-	return 0.0f;
-}
-
-float dc::ModuleProcessor::getControlInputScale(size_t index)
-{
-	if (index < _controlInputScaleValues.size())
-	{
-		return _controlInputScaleValues[index];
-	}
-	return 0.0f;
-}
-
-void dc::ModuleProcessor::handleMessages()
-{
-	ModuleProcessorMessage msg{};
-	while (_messageQueue.pop(msg))
-	{
-		switch (msg.type)
-		{
-		case ModuleProcessorMessage::Invalid:
-			break;
-		case ModuleProcessorMessage::SampleRate:
-			_sampleRate = msg.doubleParam;
-			sampleRateChanged();
-			break;
-		case ModuleProcessorMessage::BlockSize:
-			_blockSize = msg.sizeParam;
-			blockSizeChanged();
-			break;
-		case ModuleProcessorMessage::NumAudioInputs:
-			_numAudioInputs = msg.sizeParam;
-			audioIoChanged();
-			break;
-		case ModuleProcessorMessage::NumAudioOutputs:
-			_numAudioOutputs = msg.sizeParam;
-			audioIoChanged();
-			break;
-		case ModuleProcessorMessage::NumControlInputs:
-			_numControlInputs = msg.sizeParam;
-			controlIoChanged();
-			break;
-		case ModuleProcessorMessage::NumControlOutputs:
-			_numControlOutputs = msg.sizeParam;
-			controlIoChanged();
-			break;
-		case ModuleProcessorMessage::NumParams:
-			_paramValues.resize(msg.sizeParam);
-			break;
-		case ModuleProcessorMessage::ParamChanged:
-			if (msg.indexScalarParam.index < _paramValues.size())
-			{
-				_paramValues[msg.indexScalarParam.index] = msg.indexScalarParam.scalar;
-			}
-			break;
-		case ModuleProcessorMessage::ControlInputScaleChanged:
-			if (msg.indexScalarParam.index < _controlInputScaleValues.size())
-			{
-				_controlInputScaleValues[msg.indexScalarParam.index] = msg.indexScalarParam.scalar;
-			}
-			break;
-		default:;
-		}
-	}
-}
-
-
 dc::Module::Module(std::unique_ptr<ModuleProcessor> processor) : _processor(std::move(processor))
 {
 	assert(nullptr != _processor);
@@ -178,6 +87,26 @@ void dc::Module::setControlInputScale(size_t index, float value)
 		msg.floatParam = value;
 		_processor->pushMessage(msg);
 	}
+}
+
+dc::ControlMessage::Type dc::Module::getControlIoFlags(size_t index, bool isInput)
+{
+	IoType ioType = Control;
+	if (isInput)
+	{
+		ioType = ioType | Input;
+	}
+	else
+	{
+		ioType = ioType | Output;
+	}
+
+	if (auto* io = getIo(ioType, index))
+	{
+		return io->controlTypeFlags;
+	}
+
+	return ControlMessage::None;
 }
 
 bool dc::Module::setNumIo(IoType typeFlags, size_t n)
@@ -393,7 +322,7 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 			{
 				return false;
 			}
-			inputIdx = _controlInputs.size() - 1;
+			inputIdx = static_cast<int>(_controlInputs.size()) - 1;
 		}
 
 		_params.emplace_back(id, displayName, range, serializable, inputIdx);
@@ -505,4 +434,13 @@ dc::ModuleParam* dc::Module::getParam(const std::string& id)
 		}
 	}
 	return nullptr;
+}
+
+void dc::Module::setId(size_t id)
+{
+	_id = id;
+	ModuleProcessorMessage msg{};
+	msg.type = ModuleProcessorMessage::Id;
+	msg.sizeParam = id;
+	_processor->pushMessage(msg);
 }

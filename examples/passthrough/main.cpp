@@ -73,14 +73,13 @@ int main()
 	{
 		graph.setBlockSize(64);
 		graph.setSampleRate(48000);
-		graph.getParamById("nAudIn")->setRaw(nGraphIo);
-		graph.getParamById("nAudOut")->setRaw(nGraphIo);
+		graph.setNumIo(dc::Audio | dc::Input | dc::Output, nGraphIo);
 		auto* in = graph.getInputModule();
-		auto inId = in->getId();
+		const auto inId = in->getId();
 		auto* out = graph.getOutputModule();
-		auto outId = out->getId();
-		graph.addConnection({ inId, 0, outId, 0, dc::Graph::Connection::Audio });
-		graph.addConnection({ inId, 1, outId, 1, dc::Graph::Connection::Audio });
+		const auto outId = out->getId();
+		graph.addConnection({ inId, 0, outId, 0, dc::Connection::Audio });
+		graph.addConnection({ inId, 1, outId, 1, dc::Connection::Audio });
 	}
 
     PaStream* stream;

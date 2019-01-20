@@ -1,8 +1,36 @@
 #include "LevelMeter.h"
 
-dc::LevelMeter::LevelMeter()
+dc::LevelMeter::LevelMeterProcessor::LevelMeterProcessor(LevelMeter& parent) : _parent(parent)
 {
-	_levels.reserve(maxAudioChannels);
+}
+
+void dc::LevelMeter::LevelMeterProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
+{
+	if (_parent.wantsMessage())
+	{
+		for (size_t cIdx = 0; cIdx < audioBuffer.getNumChannels(); ++cIdx)
+		{
+			auto* cPtr = audioBuffer.getChannelPointer(cIdx);
+			float sum = 0.0f;
+			for (size_t sIdx = 0; sIdx < audioBuffer.getNumSamples(); ++sIdx)
+			{
+				const float sample = cPtr[sIdx];
+				sum += sample * sample;
+			}
+			const auto level = std::sqrt(sum / audioBuffer.getNumSamples());
+			LevelMessage msg{};
+			msg.index = cIdx;
+			msg.level = level;
+			_parent.pushLevelMessage(msg);
+		}
+	}
+}
+
+dc::LevelMeter::LevelMeter() :
+	Module(std::make_unique<LevelMeterProcessor>(*this)),
+	_levelMessageQueue(MODULE_DEFAULT_MAX_IO)
+{
+	_levels.resize(MODULE_DEFAULT_MAX_IO);
 }
 
 float dc::LevelMeter::getLevel(size_t channel)
@@ -14,42 +42,16 @@ float dc::LevelMeter::getLevel(size_t channel)
 	return 0.0f;
 }
 
-void dc::LevelMeter::setNumAudioIo(size_t num, bool isInput)
+bool dc::LevelMeter::pushLevelMessage(const LevelMessage& msg)
 {
-	while (num < getNumAudioIo(true))
-	{
-		removeAudioIo(getNumAudioIo(true) - 1, true);
-		removeAudioIo(getNumAudioIo(false) - 1, false);
-	}
-	while (num > getNumAudioIo(true))
-	{
-		addAudioIo(true);
-		addAudioIo(false);
-	}
+	return _levelMessageQueue.push(msg);
 }
 
-void dc::LevelMeter::process()
+void dc::LevelMeter::handleLevelMessages()
 {
-	const size_t nChannels = _audioBuffer.getNumChannels();
-
-	while (nChannels < _levels.size())
+	LevelMessage msg{};
+	while (_levelMessageQueue.pop(msg))
 	{
-		_levels.pop_back();
-	}
-	while (nChannels > _levels.size())
-	{
-		_levels.emplace_back(0.0f);
-	}
-
-	for (size_t cIdx = 0; cIdx < _audioBuffer.getNumChannels(); ++cIdx)
-	{
-		auto* cPtr = _audioBuffer.getChannelPointer(cIdx);
-		float sum = 0.0f;
-		for (size_t sIdx = 0; sIdx < _audioBuffer.getNumSamples(); ++sIdx)
-		{
-			const auto sample = cPtr[sIdx];
-			sum += sample * sample;
-		}
-		_levels[cIdx] = std::sqrt(sum / _audioBuffer.getNumSamples());
+		_levels[msg.index] = msg.level;
 	}
 }

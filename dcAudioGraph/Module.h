@@ -1,102 +1,11 @@
 #pragma once
 
 #include <memory>
-#include "AudioBuffer.h"
-#include "ControlBuffer.h"
-#include "MessageQueue.h"
 #include "ModuleParam.h"
+#include "ModuleProcessor.h"
 
 namespace dc
 {
-const size_t MODULE_MAX_MESSAGES = 32;
-const size_t MODULE_DEFAULT_MAX_IO = 16;
-const size_t MODULE_DEFAULT_MAX_PARAMS = 16;
-const size_t MODULE_DEFAULT_MAX_BLOCK_SIZE = 2048;
-
-struct IndexScalarPair final
-{
-	size_t index;
-	float scalar;
-};
-
-struct ModuleProcessorMessage final
-{
-	enum Type
-	{
-		Invalid = 0,
-		SampleRate,
-		BlockSize,
-		NumAudioInputs,
-		NumAudioOutputs,
-		NumControlInputs,
-		NumControlOutputs,
-		NumParams,
-		ParamChanged,
-		ControlInputScaleChanged
-	};
-
-	Type type;
-
-	union
-	{
-		uint8_t noParam;
-		size_t sizeParam;
-		float floatParam;
-		double doubleParam;
-		IndexScalarPair indexScalarParam;
-	};
-};
-
-class ModuleProcessor
-{
-public:
-	ModuleProcessor();
-	virtual ~ModuleProcessor() = default;
-
-	ModuleProcessor(const ModuleProcessor&) = delete;
-	ModuleProcessor& operator=(const ModuleProcessor&) = delete;
-	ModuleProcessor(ModuleProcessor&& other) = delete;
-	ModuleProcessor& operator=(ModuleProcessor&& other) = delete;
-
-	void process();
-	bool pushMessage(const ModuleProcessorMessage& msg);
-
-protected:
-	virtual void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) = 0;
-	virtual void sampleRateChanged() {}
-	virtual void blockSizeChanged() {}
-	virtual void audioIoChanged() {}
-	virtual void controlIoChanged() {}
-
-	double getSampleRate() const { return _sampleRate; }
-	size_t getBlockSize() const { return _blockSize; }
-
-	size_t getNumAudioInputs() const { return _numAudioInputs; }
-	size_t getNumAudioOutputs() const { return _numAudioOutputs; }
-	size_t getNumControlInputs() const { return _numControlInputs; }
-	size_t getNumControlOutputs() const { return _numControlOutputs; }
-
-	size_t getNumParams() const { return _paramValues.size(); }
-	float getParamValue(size_t index);
-
-	float getControlInputScale(size_t index);
-
-private:
-	void handleMessages();
-
-	MessageQueue<ModuleProcessorMessage> _messageQueue{ MODULE_MAX_MESSAGES };
-	double _sampleRate = 0;
-	size_t _blockSize = 0;
-	size_t _numAudioInputs = 0;
-	size_t _numAudioOutputs = 0;
-	size_t _numControlInputs = 0;
-	size_t _numControlOutputs = 0;
-	AudioBuffer _audioBuffer;
-	ControlBuffer _controlBuffer;
-	std::vector<float> _paramValues;
-	std::vector<float> _controlInputScaleValues;
-};
-
 enum IoType : uint8_t
 {
 	Audio = 0x01,
@@ -107,7 +16,7 @@ enum IoType : uint8_t
 
 constexpr IoType operator|(const IoType lhs, const IoType rhs)
 {
-	return static_cast<IoType>(lhs | rhs);
+	return static_cast<IoType>(static_cast<uint8_t>(lhs) | static_cast<uint8_t>(rhs));
 }
 
 class Module
@@ -120,13 +29,17 @@ public:
 		float scale = 1.0f;
 	};
 
+	friend class Graph;
+
 	explicit Module(std::unique_ptr<ModuleProcessor> processor);
-	virtual ~Module();
+	virtual ~Module() = default;
 
 	Module(const Module&) = delete;
 	Module& operator=(const Module&) = delete;
 	Module(Module&&) = delete;
 	Module& operator=(Module&&) = delete;
+
+	size_t getId() const { return _id; }
 
 	void setSampleRate(double sampleRate);
 	double getSampleRate() const { return _sampleRate; }
@@ -139,6 +52,7 @@ public:
 	std::string getIoDescription(IoType typeFlags, size_t index);
 	float getControlInputScale(size_t index);
 	void setControlInputScale(size_t index, float value);
+	ControlMessage::Type getControlIoFlags(size_t index, bool isInput);
 	bool setNumIo(IoType typeFlags, size_t n);
 	bool addIo(IoType typeFlags,
 		const std::string& description = "",
@@ -180,5 +94,9 @@ private:
 	std::vector<Io> _controlInputs;
 	std::vector<Io> _controlOutputs;
 	std::vector<ModuleParam> _params;
+
+	// for the Graph
+	void setId(size_t id);
+	size_t _id = 0;
 };
 }

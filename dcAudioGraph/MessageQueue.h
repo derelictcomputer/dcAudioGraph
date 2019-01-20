@@ -24,6 +24,10 @@ public:
 	MessageQueue(MessageQueue&&) = delete;
 	MessageQueue& operator=(MessageQueue&&) = delete;
 
+	bool empty() const { return _size.load() == 0; }
+	bool full() const { return _size.load() >= _maxSize; }
+	size_t numMessages() const { return _size.load(); }
+
 	bool push(const MessageType& msg)
 	{
 		if (_size.load(std::memory_order_acquire) < _maxSize)
