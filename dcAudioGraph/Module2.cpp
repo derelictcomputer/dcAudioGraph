@@ -1,5 +1,5 @@
+#include "Module2.h"
 #include <cassert>
-#include "Module.h"
 
 dc::ModuleProcessor::ModuleProcessor()
 {
