@@ -88,6 +88,7 @@ public:
 	void removeModuleAt(size_t index);
 	void removeModuleById(size_t id);
 
+	bool connectionIsValid(const Connection& connection);
 	bool addConnection(const Connection& connection);
 	void removeConnection(const Connection& connection);
 	size_t getNumConnections() const { return _allConnections.size(); }
@@ -112,7 +113,6 @@ private:
 	bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType) override;
 	bool removeIoInternal(std::vector<Io>& io, size_t index) override;
 
-	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);
 	bool getModulesForConnection(const Connection& connection, Module*& from, Module*& to);
 	bool connectionCreatesLoop(const Connection& connection);
