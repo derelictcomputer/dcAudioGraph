@@ -208,6 +208,33 @@ bool dc::Module::removeIo(IoType typeFlags, size_t index)
 	return success;
 }
 
+std::string dc::Module::getParamId(size_t index)
+{
+	if (auto* p = getParam(index))
+	{
+		return p->getId();
+	}
+	return "";
+}
+
+std::string dc::Module::getParamDisplayName(size_t index)
+{
+	if (auto* p = getParam(index))
+	{
+		return p->getDisplayName();
+	}
+	return "";
+}
+
+std::string dc::Module::getParamDisplayName(const std::string& id)
+{
+	if (auto* p = getParam(id))
+	{
+		return p->getDisplayName();
+	}
+	return "";
+}
+
 bool dc::Module::getParamRange(size_t index, ParamRange& rangeOut)
 {
 	if (auto* p = getParam(index))

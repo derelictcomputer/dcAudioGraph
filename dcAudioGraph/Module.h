@@ -39,6 +39,9 @@ public:
 	Module(Module&&) = delete;
 	Module& operator=(Module&&) = delete;
 
+	// just some user data in case you need to tag modules
+	std::string tag = "";
+
 	size_t getId() const { return _id; }
 
 	void setSampleRate(double sampleRate);
@@ -61,6 +64,9 @@ public:
 
 	// Params
 	size_t getNumParams() const { return _params.size(); }
+	std::string getParamId(size_t index);
+	std::string getParamDisplayName(size_t index);
+	std::string getParamDisplayName(const std::string& id);
 	bool getParamRange(size_t index, ParamRange& rangeOut);
 	bool getParamRange(const std::string& id, ParamRange& rangeOut);
 	float getParamValue(size_t index);
