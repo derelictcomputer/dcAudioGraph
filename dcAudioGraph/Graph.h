@@ -47,7 +47,6 @@ struct GraphProcessorMessage
 	{
 		ModuleProcessor* moduleParam;
 		Connection connectionParam;
-		size_t sizeParam;
 	};
 };
 

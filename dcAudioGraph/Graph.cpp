@@ -151,20 +151,28 @@ void dc::GraphProcessor::handleGraphMessages()
 		case GraphProcessorMessage::AddModule: 
 			_processors.push_back(msg.moduleParam);
 			break;
-		case GraphProcessorMessage::RemoveModule: 
-			if (msg.sizeParam < _processors.size())
-			{
-				_processors.erase(_processors.begin() + msg.sizeParam);
-			}
+		case GraphProcessorMessage::RemoveModule:
+            for (auto it = _processors.begin(); it != _processors.end(); ++it)
+            {
+                if (*it == msg.moduleParam)
+                {
+					_processors.erase(it);
+					break;
+                }
+            }
 			break;
 		case GraphProcessorMessage::AddConnection: 
 			_connections.emplace_back(msg.connectionParam);
 			break;
-		case GraphProcessorMessage::RemoveConnection: 
-			if (msg.sizeParam < _connections.size())
-			{
-				_connections.erase(_connections.begin() + msg.sizeParam);
-			}
+		case GraphProcessorMessage::RemoveConnection:
+            for (auto it = _connections.begin(); it != _connections.end(); ++it)
+            {
+                if (*it == msg.connectionParam)
+                {
+					_connections.erase(it);
+					break;
+                }
+            }
 			break;
 		default: ;
 		}
@@ -299,7 +307,7 @@ void dc::Graph::removeConnection(const Connection& connection)
 		{
 			GraphProcessorMessage msg{};
 			msg.type = GraphProcessorMessage::RemoveConnection;
-			msg.sizeParam = i;
+			msg.connectionParam = connection;
 			_graphProcessor->pushGraphMessage(msg);
 
 			_allConnections.erase(_allConnections.begin() + i);
@@ -534,7 +542,7 @@ bool dc::Graph::removeModuleInternal(size_t index)
 	// let the processor know this one went away
 	GraphProcessorMessage msg{};
 	msg.type = GraphProcessorMessage::RemoveModule;
-	msg.sizeParam = index;
+	msg.moduleParam = _modules[index]->_processor.get();
 	_graphProcessor->pushGraphMessage(msg);
 
     // stick the module into the release pool
