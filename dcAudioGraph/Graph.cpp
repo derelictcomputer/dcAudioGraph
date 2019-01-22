@@ -39,6 +39,9 @@ void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& contro
 	audioBuffer.copyFrom(_output->_audioBuffer, false);
 	controlBuffer.clear();
 	controlBuffer.merge(_output->_controlBuffer);
+
+    // let the parent know they can clear out removed modules
+	_parent.setReadyToReleaseModules();
 }
 
 void dc::GraphProcessor::processModule(ModuleProcessor* proc)
@@ -169,7 +172,7 @@ void dc::GraphProcessor::handleGraphMessages()
 }
 
 dc::Graph::Graph() :
-	Module(std::make_unique<GraphProcessor>()),
+	Module(std::make_unique<GraphProcessor>(*this)),
 	_graphProcessor(dynamic_cast<GraphProcessor*>(_processor.get()))
 {
 	GraphProcessorMessage msg{};
@@ -189,13 +192,9 @@ dc::Graph::Graph() :
 	}
 }
 
-void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev)
+void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) const
 {
-	if (incrementRev)
-	{
-		_graphProcessor->incRev();
-	}
-
+	_graphProcessor->incRev();
 	_graphProcessor->process(audioBuffer, controlBuffer);
 }
 
@@ -255,21 +254,7 @@ dc::Module* dc::Graph::getModuleById(size_t id)
 
 bool dc::Graph::removeModuleAt(size_t index)
 {
-	if (index < _modules.size())
-	{
-		disconnectModule(_modules[index]->_id);
-
-		GraphProcessorMessage msg{};
-		msg.type = GraphProcessorMessage::RemoveModule;
-		msg.sizeParam = index;
-		_graphProcessor->pushGraphMessage(msg);
-
-		_modules.erase(_modules.begin() + index);
-
-		return true;
-	}
-
-	return false;
+	return removeModuleInternal(index);
 }
 
 bool dc::Graph::removeModuleById(size_t id)
@@ -531,4 +516,40 @@ bool dc::Graph::getInputConnectionsForModule(Module& m, std::vector<Connection>&
 		}
 	}
 	return !connections.empty();
+}
+
+bool dc::Graph::removeModuleInternal(size_t index)
+{
+    // release any old removed modules
+	releaseRemovedModules();
+
+    if (index >= _modules.size())
+    {
+		return false;
+    }
+
+    // disconnect the module
+	disconnectModule(_modules[index]->_id);
+
+	// let the processor know this one went away
+	GraphProcessorMessage msg{};
+	msg.type = GraphProcessorMessage::RemoveModule;
+	msg.sizeParam = index;
+	_graphProcessor->pushGraphMessage(msg);
+
+    // stick the module into the release pool
+	_moduleReleasePool.emplace_back(_modules[index].release());
+	_modules.erase(_modules.begin() + index);
+	_readyToRelease.clear();
+
+	return true;
+}
+
+void dc::Graph::releaseRemovedModules()
+{
+    if (_readyToRelease.test_and_set())
+    {
+		_moduleReleasePool.clear();
+		_readyToRelease.clear();
+    }
 }

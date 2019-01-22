@@ -54,6 +54,8 @@ struct GraphProcessorMessage
 class GraphProcessor : public ModuleProcessor
 {
 public:
+	explicit GraphProcessor(Graph& parent) : _parent(parent) {}
+
 	void incRev() { ++_rev; }
 	bool pushGraphMessage(const GraphProcessorMessage& msg);
 	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
@@ -64,6 +66,7 @@ private:
 	ModuleProcessor* getModuleById(size_t id);
 	bool getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections);
 
+	Graph& _parent;
 	MessageQueue<GraphProcessorMessage> _graphMessageQueue{ MODULE_MAX_MESSAGES };
 	ModuleProcessor* _input = nullptr;
 	ModuleProcessor* _output = nullptr;
@@ -76,7 +79,7 @@ class Graph final : public Module
 public:
 	Graph();
 
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer, bool incrementRev = true);
+	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) const;
 
 	Module* getInputModule() { return &_input; }
 	Module* getOutputModule() { return &_output; }
@@ -95,6 +98,8 @@ public:
 	size_t getNumConnections() const { return _allConnections.size(); }
 	bool getConnection(size_t index, Connection& connectionOut);
 	void disconnectModule(size_t id);
+
+	void setReadyToReleaseModules() { _readyToRelease.test_and_set(); }
 
 private:
 	// Just a passthrough for processing graph I/O
@@ -120,11 +125,26 @@ private:
 
 	bool getInputConnectionsForModule(Module& m, std::vector<Connection>& connections);
 
+	bool removeModuleInternal(size_t index);
+	void releaseRemovedModules();
+
 	GraphProcessor* _graphProcessor;
 	GraphIoModule _input;
 	GraphIoModule _output;
 	std::vector<std::unique_ptr<Module>> _modules;
-	std::vector<Connection> _allConnections;
+    std::vector<Connection> _allConnections;
+
+    // this is here to avoid deleting ModuleProcessors while the GraphProcessor is using them.
+    // Order of operations for a "removeModule" call:
+    //      1. Clear out the release pool if the flag is set
+    //      2. Disconnect the module
+    //      3. Tell the GraphProcessor the module went away
+    //      4. Stick the module in the release pool
+    //      5. Clear the flag
+    //
+    // Note: this means there's usually going to be a Module hanging around in the release pool.
+	std::vector<std::unique_ptr<Module>> _moduleReleasePool;
+	std::atomic_flag _readyToRelease = ATOMIC_FLAG_INIT;
 
 	size_t _nextModuleId = 1;
 };
