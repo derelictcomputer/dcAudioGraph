@@ -1,7 +1,8 @@
 #include "Gain.h"
 
-void dc::Gain::GainProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
+void dc::Gain::GainProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& /*controlBuffer*/)
 {
+	// TODO: apply change to gain value from control input
 	audioBuffer.applyGain(getParamValue(0));
 }
 

@@ -104,7 +104,7 @@ private:
 	public:
 		class DummyProcessor : public ModuleProcessor
 		{
-			void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override {}
+			void process(AudioBuffer& /*audioBuffer*/, ControlBuffer& /*controlBuffer*/) override {}
 		};
 
 		GraphIoModule() : Module(std::make_unique<DummyProcessor>()) {}

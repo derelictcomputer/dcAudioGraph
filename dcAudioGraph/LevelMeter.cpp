@@ -4,7 +4,7 @@ dc::LevelMeter::LevelMeterProcessor::LevelMeterProcessor(LevelMeter& parent) : _
 {
 }
 
-void dc::LevelMeter::LevelMeterProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
+void dc::LevelMeter::LevelMeterProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& /*controlBuffer*/)
 {
 	if (_parent.wantsMessage())
 	{
