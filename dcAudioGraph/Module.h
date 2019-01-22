@@ -3,7 +3,6 @@
 #include <memory>
 #include "ModuleParam.h"
 #include "ModuleProcessor.h"
-#include "Transport.h"
 
 namespace dc
 {
@@ -75,12 +74,6 @@ public:
 	void setParamValue(size_t index, float value);
 	void setParamValue(const std::string& id, float value);
 
-	// Transport
-	// A module can have one of these, and it may actually care about it.
-	// Up to you!
-	Transport* getTransport() const { return _transport; }
-	void setTransport(Transport* transport) { _transport = transport; }
-
 protected:
 	virtual void blockSizeChanged() {}
 
@@ -109,7 +102,6 @@ private:
 	std::vector<Io> _controlInputs;
 	std::vector<Io> _controlOutputs;
 	std::vector<ModuleParam> _params;
-	Transport* _transport = nullptr;
 
 	// for the Graph
 	void setId(size_t id);
