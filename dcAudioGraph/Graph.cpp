@@ -31,6 +31,9 @@ void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& contro
 	_input->_controlBuffer.clear();
 	_input->_controlBuffer.merge(controlBuffer);
 
+	_output->_audioBuffer.zero();
+	_output->_controlBuffer.clear();
+
 	processModule(_output);
 
 	audioBuffer.copyFrom(_output->_audioBuffer, false);
