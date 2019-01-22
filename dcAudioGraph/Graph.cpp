@@ -253,7 +253,7 @@ dc::Module* dc::Graph::getModuleById(size_t id)
 	return nullptr;
 }
 
-void dc::Graph::removeModuleAt(size_t index)
+bool dc::Graph::removeModuleAt(size_t index)
 {
 	if (index < _modules.size())
 	{
@@ -265,19 +265,23 @@ void dc::Graph::removeModuleAt(size_t index)
 		_graphProcessor->pushGraphMessage(msg);
 
 		_modules.erase(_modules.begin() + index);
+
+		return true;
 	}
+
+	return false;
 }
 
-void dc::Graph::removeModuleById(size_t id)
+bool dc::Graph::removeModuleById(size_t id)
 {
 	for (size_t i = 0; i < _modules.size(); ++i)
 	{
 		if (_modules[i]->getId() == id)
 		{
-			removeModuleAt(i);
-			return;
+			return removeModuleAt(i);
 		}
 	}
+	return false;
 }
 
 bool dc::Graph::addConnection(const Connection& connection)

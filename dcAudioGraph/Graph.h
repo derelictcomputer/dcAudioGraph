@@ -65,8 +65,8 @@ private:
 	bool getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections);
 
 	MessageQueue<GraphProcessorMessage> _graphMessageQueue{ MODULE_MAX_MESSAGES };
-	ModuleProcessor* _input;
-	ModuleProcessor* _output;
+	ModuleProcessor* _input = nullptr;
+	ModuleProcessor* _output = nullptr;
 	std::vector<ModuleProcessor*> _processors;
 	std::vector<Connection> _connections;
 };
@@ -85,8 +85,8 @@ public:
 	size_t getNumModules() const { return _modules.size(); }
 	Module* getModuleAt(size_t index);
 	Module* getModuleById(size_t id);
-	void removeModuleAt(size_t index);
-	void removeModuleById(size_t id);
+	bool removeModuleAt(size_t index);
+	bool removeModuleById(size_t id);
 
 	bool connectionIsValid(const Connection& connection);
 	bool connectionExists(const Connection& connection);
