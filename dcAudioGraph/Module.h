@@ -88,6 +88,8 @@ protected:
 		bool serializable = false, bool hasControlInput = false);
 	bool removeParam(size_t index);
 
+	ModuleProcessor* getProcessor() const { return _processor.get(); }
+
 private:
 	void notifyIoChange(IoType typeFlags) const;
 	Io* getIo(IoType typeFlags, size_t index);
