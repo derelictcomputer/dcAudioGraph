@@ -25,6 +25,11 @@ void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& contro
 	for (auto p : _processors)
 	{
 		p->handleMessages();
+
+        if (p->alwaysProcess())
+        {
+			processModule(p);
+        }
 	}
 
 	_input->_audioBuffer.copyFrom(audioBuffer, false);

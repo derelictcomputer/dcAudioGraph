@@ -60,6 +60,9 @@ public:
 	ModuleProcessor(ModuleProcessor&& other) = delete;
 	ModuleProcessor& operator=(ModuleProcessor&& other) = delete;
 
+	// override this if your module should process even if it's not connected to an output
+	virtual bool alwaysProcess() const { return false; }
+
 	void process();
 	bool pushMessage(const ModuleProcessorMessage& msg);
 	void handleMessages();
