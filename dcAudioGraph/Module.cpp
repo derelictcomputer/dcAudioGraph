@@ -336,9 +336,7 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 
 		_params.emplace_back(id, displayName, range, serializable, inputIdx);
 
-		ModuleProcessorMessage msg{};
-		msg.type = ModuleProcessorMessage::NumParams;
-		msg.sizeParam = _params.size();
+        const AddParamMessage msg{range, inputIdx};
 		_processor->pushMessage(msg);
 
 		return true;
@@ -353,8 +351,8 @@ bool dc::Module::removeParam(size_t index)
 		_params.erase(_params.begin() + index);
 
 		ModuleProcessorMessage msg{};
-		msg.type = ModuleProcessorMessage::NumParams;
-		msg.sizeParam = _params.size();
+		msg.type = ModuleProcessorMessage::RemoveParam;
+		msg.sizeParam = index;
 		_processor->pushMessage(msg);
 
 		return true;

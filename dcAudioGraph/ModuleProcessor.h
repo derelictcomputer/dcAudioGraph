@@ -3,6 +3,7 @@
 #include "AudioBuffer.h"
 #include "ControlBuffer.h"
 #include "MessageQueue.h"
+#include "ModuleParam.h"
 
 namespace dc
 {
@@ -17,6 +18,12 @@ struct IndexScalarPair final
 	float scalar;
 };
 
+struct AddParamMessage
+{
+	ParamRange range;
+	int controlInputIndex;
+};
+
 struct ModuleProcessorMessage final
 {
 	enum Type
@@ -29,7 +36,7 @@ struct ModuleProcessorMessage final
 		NumAudioOutputs,
 		NumControlInputs,
 		NumControlOutputs,
-		NumParams,
+        RemoveParam,
 		ParamChanged
 	};
 
@@ -64,6 +71,7 @@ public:
 
 	void process();
 	bool pushMessage(const ModuleProcessorMessage& msg);
+	bool pushMessage(const AddParamMessage& msg);
 	void handleMessages();
 
 protected:
@@ -81,7 +89,7 @@ protected:
 	size_t getNumControlInputs() const { return _numControlInputs; }
 	size_t getNumControlOutputs() const { return _numControlOutputs; }
 
-	size_t getNumParams() const { return _paramValues.size(); }
+	size_t getNumParams() const { return _params.size(); }
 	float getParamValue(size_t index);
 
 private:
@@ -89,6 +97,7 @@ private:
 	void refreshControlBuffer();
 
 	MessageQueue<ModuleProcessorMessage> _messageQueue{ MODULE_MAX_MESSAGES };
+	MessageQueue<AddParamMessage> _addParamQueue{ MODULE_MAX_MESSAGES };
 	size_t _id = 0;
 	size_t _rev = 0;
 	double _sampleRate = 0;
@@ -99,6 +108,6 @@ private:
 	size_t _numControlOutputs = 0;
 	AudioBuffer _audioBuffer;
 	ControlBuffer _controlBuffer;
-	std::vector<float> _paramValues;
+	std::vector<ModuleParam> _params;
 };
 }
