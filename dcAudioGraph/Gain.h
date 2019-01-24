@@ -12,7 +12,13 @@ class Gain : public Module
 {
 	class GainProcessor : public ModuleProcessor
 	{
+	protected:
 		void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
+        void paramValueChanged(size_t) override;
+
+	private:
+		bool _updateGainParam = false;
+		float _lastGainValue = 0.0f;
 	};
 
 public:
