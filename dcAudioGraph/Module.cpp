@@ -270,11 +270,7 @@ void dc::Module::setParamValue(const std::string& id, float value)
 	{
 		if (_params[i].getId() == id)
 		{
-			_params[i].setRaw(value);
-			ModuleProcessorMessage msg{};
-			msg.type = ModuleProcessorMessage::ParamChanged;
-			msg.indexScalarParam = { i, _params[i].getRaw() };
-			_processor->pushMessage(msg);
+			setParamValue(i, value);
 		}
 	}
 }

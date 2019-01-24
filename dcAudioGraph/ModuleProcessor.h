@@ -80,6 +80,7 @@ protected:
 	virtual void blockSizeChanged() {}
 	virtual void audioIoChanged() {}
 	virtual void controlIoChanged() {}
+    virtual void paramValueChanged(size_t /*paramIdx*/) {}
 
 	double getSampleRate() const { return _sampleRate; }
 	size_t getBlockSize() const { return _blockSize; }

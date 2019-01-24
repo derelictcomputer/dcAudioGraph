@@ -26,6 +26,13 @@ bool dc::ModuleProcessor::pushMessage(const AddParamMessage& msg)
 void dc::ModuleProcessor::handleMessages()
 {
 	{
+		AddParamMessage msg;
+		while (_addParamQueue.pop(msg))
+		{
+			_params.emplace_back("", "", msg.range, false, msg.controlInputIndex);
+		}
+	}
+	{
 		ModuleProcessorMessage msg{};
 		while (_messageQueue.pop(msg))
 		{
@@ -69,21 +76,18 @@ void dc::ModuleProcessor::handleMessages()
 				_params.erase(_params.begin() + msg.sizeParam);
 				break;
 			case ModuleProcessorMessage::ParamChanged:
-				if (msg.indexScalarParam.index < _params.size())
+			{
+				const size_t idx = msg.indexScalarParam.index;
+				if (idx < _params.size())
 				{
-					_params[msg.indexScalarParam.index].setRaw(msg.indexScalarParam.scalar);
+					_params[idx].setRaw(msg.indexScalarParam.scalar);
+					paramValueChanged(idx);
 				}
 				break;
+			}
 			default:;
 			}
 		}
-	}
-	{
-		AddParamMessage msg;
-        while (_addParamQueue.pop(msg))
-        {
-			_params.emplace_back("", "", msg.range, false, msg.controlInputIndex);
-        }
 	}
 }
 

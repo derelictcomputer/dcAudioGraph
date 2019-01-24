@@ -93,7 +93,8 @@ dc::ModuleParam::ModuleParam(std::string id, std::string displayName, const Para
 	_displayName(std::move(displayName)),
 	_range(range),
 	_serializable(serializable),
-	_controlInputIndex(controlInputIndex)
+	_controlInputIndex(controlInputIndex),
+    _value(_range.getMin())
 {
 }
 
@@ -102,7 +103,8 @@ _id(other._id),
 _displayName(other._displayName),
 _range(other._range),
 _serializable(other._serializable),
-_controlInputIndex(other._controlInputIndex)
+_controlInputIndex(other._controlInputIndex),
+_value(other._value.load())
 {
 
 }
@@ -116,6 +118,7 @@ dc::ModuleParam& dc::ModuleParam::operator=(const ModuleParam& other)
 		_range = other._range;
 		_serializable = other._serializable;
 		_controlInputIndex = other._controlInputIndex;
+		_value = other._value.load();
 	}
 	return *this;
 }
