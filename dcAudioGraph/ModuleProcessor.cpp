@@ -100,6 +100,24 @@ float dc::ModuleProcessor::getParamValue(size_t index)
 	return 0.0f;
 }
 
+float dc::ModuleProcessor::getParamValueNormalized(size_t index)
+{
+    if (index < _params.size())
+    {
+		return _params[index].getNormalized();
+    }
+	return 0.0f;
+}
+
+float dc::ModuleProcessor::getRawValueFromNormalized(size_t paramIdx, float normalizedValue)
+{
+    if (paramIdx < _params.size())
+    {
+		return _params[paramIdx].getRange().getRaw(normalizedValue);
+    }
+	return 0.0f;
+}
+
 void dc::ModuleProcessor::refreshAudioBuffer()
 {
 	_audioBuffer.resize(_blockSize, std::max(_numAudioInputs, _numAudioOutputs));

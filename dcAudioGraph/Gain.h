@@ -18,7 +18,8 @@ class Gain : public Module
 
 	private:
 		bool _updateGainParam = false;
-		float _lastGainValue = 0.0f;
+		float _lastKnobValue = 0.0f;
+		float _lastControlValue = 0.0f;
 	};
 
 public:

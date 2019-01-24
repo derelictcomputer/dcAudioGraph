@@ -2,31 +2,67 @@
 
 void dc::Gain::GainProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
 {
-	const float currentGain = getParamValue(0);
+	const size_t nChannels = audioBuffer.getNumChannels();
+	const size_t nSamples = audioBuffer.getNumSamples();
+	size_t lastSample = 0;
 
-    if (_updateGainParam)
-    {
-        // TODO: do we need a configurable ramp time for the gain knob?
-		const float gainPerSample = (currentGain - _lastGainValue) / audioBuffer.getNumSamples();
-		float gain = _lastGainValue;
-        for (size_t cIdx = 0; cIdx < audioBuffer.getNumChannels(); ++cIdx)
-        {
+	// knob info
+	float knobValue = _lastKnobValue;
+	float knobInc = 0;
+
+	// control input info
+	float controlValue = _lastControlValue;
+
+	if (_updateGainParam)
+	{
+		knobInc = (getParamValueNormalized(0) - knobValue) / nSamples;
+	}
+
+	{
+		auto it = controlBuffer.getIterator(0);
+		ControlMessage msg;
+		while (it.next(msg))
+		{
+			if (msg.sampleOffset >= nSamples)
+			{
+				continue;
+			}
+
+			const size_t sampleDelta = msg.sampleOffset - lastSample;
+			const float controlInc = (msg.floatParam - controlValue) / sampleDelta;
+
+			for (size_t cIdx = 0; cIdx < nChannels; ++cIdx)
+			{
+				auto* cPtr = audioBuffer.getChannelPointer(cIdx);
+				for (; lastSample < msg.sampleOffset; ++lastSample)
+				{
+					const float combinedValue = knobValue + controlValue * (1.0f - knobValue);
+					const float gain = getRawValueFromNormalized(0, combinedValue);
+					cPtr[lastSample] *= gain;
+					knobValue += knobInc;
+					controlValue += controlInc;
+				}
+			}
+		}
+	}
+
+	if (lastSample < nSamples)
+	{
+		for (size_t cIdx = 0; cIdx < nChannels; ++cIdx)
+		{
 			auto* cPtr = audioBuffer.getChannelPointer(cIdx);
-            for (size_t sIdx = 0; sIdx < audioBuffer.getNumSamples(); ++sIdx)
-            {
-				cPtr[sIdx] *= gain;
-				gain += gainPerSample;
-            }
-        }
-		_updateGainParam = false;
-    }
-    // if nothing changed, just apply the gain directly
-    else
-    {
-		audioBuffer.applyGain(currentGain);
-    }
+			for (; lastSample < nSamples; ++lastSample)
+			{
+				const float combinedValue = knobValue + controlValue * (1.0f - knobValue);
+				const float gain = getRawValueFromNormalized(0, combinedValue);
+				cPtr[lastSample] *= gain;
+				knobValue += knobInc;
+			}
+		}
+	}
 
-	_lastGainValue = currentGain;
+	_lastKnobValue = knobValue;
+	_lastControlValue = controlValue;
 }
 
 void dc::Gain::GainProcessor::paramValueChanged(size_t)
@@ -36,6 +72,7 @@ void dc::Gain::GainProcessor::paramValueChanged(size_t)
 
 dc::Gain::Gain() : Module(std::make_unique<GainProcessor>())
 {
-	addParam("gain", "Gain", ParamRange(0.0f, 2.0f, 0.0f), true, true);
+	setNumIo(Audio | Input | Output, 1);
+	addParam("gain", "Gain", ParamRange(0.0f, 1.0f, 0.0f), true, true);
 	setParamValue("gain", 1.0f);
 }

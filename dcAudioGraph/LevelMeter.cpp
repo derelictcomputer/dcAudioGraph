@@ -30,6 +30,7 @@ dc::LevelMeter::LevelMeter() :
 	Module(std::make_unique<LevelMeterProcessor>(*this)),
 	_levelMessageQueue(MODULE_DEFAULT_MAX_IO)
 {
+	setNumIo(Audio | Input | Output, 1);
 	_levels.resize(MODULE_DEFAULT_MAX_IO);
 }
 

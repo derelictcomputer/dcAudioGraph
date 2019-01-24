@@ -92,6 +92,8 @@ protected:
 
 	size_t getNumParams() const { return _params.size(); }
 	float getParamValue(size_t index);
+	float getParamValueNormalized(size_t index);
+	float getRawValueFromNormalized(size_t paramIdx, float normalizedValue);
 
 private:
 	void refreshAudioBuffer();
