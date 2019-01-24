@@ -30,8 +30,7 @@ struct ModuleProcessorMessage final
 		NumControlInputs,
 		NumControlOutputs,
 		NumParams,
-		ParamChanged,
-		ControlInputScaleChanged
+		ParamChanged
 	};
 
 	Type type;
@@ -85,8 +84,6 @@ protected:
 	size_t getNumParams() const { return _paramValues.size(); }
 	float getParamValue(size_t index);
 
-	float getControlInputScale(size_t index);
-
 private:
 	void refreshAudioBuffer();
 	void refreshControlBuffer();
@@ -103,6 +100,5 @@ private:
 	AudioBuffer _audioBuffer;
 	ControlBuffer _controlBuffer;
 	std::vector<float> _paramValues;
-	std::vector<float> _controlInputScaleValues;
 };
 }

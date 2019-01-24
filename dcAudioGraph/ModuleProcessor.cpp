@@ -6,7 +6,6 @@ dc::ModuleProcessor::ModuleProcessor() :
 {
 	_controlBuffer.setNumChannels(MODULE_DEFAULT_MAX_IO);
 	_paramValues.reserve(MODULE_DEFAULT_MAX_PARAMS);
-	_controlInputScaleValues.reserve(MODULE_DEFAULT_MAX_IO);
 }
 
 void dc::ModuleProcessor::process()
@@ -52,7 +51,6 @@ void dc::ModuleProcessor::handleMessages()
 			break;
 		case ModuleProcessorMessage::NumControlInputs:
 			_numControlInputs = msg.sizeParam;
-			_controlInputScaleValues.resize(_numControlInputs);
 			refreshControlBuffer();
 			controlIoChanged();
 			break;
@@ -70,12 +68,6 @@ void dc::ModuleProcessor::handleMessages()
 				_paramValues[msg.indexScalarParam.index] = msg.indexScalarParam.scalar;
 			}
 			break;
-		case ModuleProcessorMessage::ControlInputScaleChanged:
-			if (msg.indexScalarParam.index < _controlInputScaleValues.size())
-			{
-				_controlInputScaleValues[msg.indexScalarParam.index] = msg.indexScalarParam.scalar;
-			}
-			break;
 		default:;
 		}
 	}
@@ -86,15 +78,6 @@ float dc::ModuleProcessor::getParamValue(size_t index)
 	if (index < _paramValues.size())
 	{
 		return _paramValues[index];
-	}
-	return 0.0f;
-}
-
-float dc::ModuleProcessor::getControlInputScale(size_t index)
-{
-	if (index < _controlInputScaleValues.size())
-	{
-		return _controlInputScaleValues[index];
 	}
 	return 0.0f;
 }

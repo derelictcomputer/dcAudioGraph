@@ -71,27 +71,6 @@ std::string dc::Module::getIoDescription(IoType typeFlags, size_t index)
 	return "";
 }
 
-float dc::Module::getControlInputScale(size_t index)
-{
-	if (auto* io = getIo(Control | Input, index))
-	{
-		return io->scale;
-	}
-	return 0.0f;
-}
-
-void dc::Module::setControlInputScale(size_t index, float value)
-{
-	if (auto* io = getIo(Control | Input, index))
-	{
-		io->scale = value;
-		ModuleProcessorMessage msg{};
-		msg.type = ModuleProcessorMessage::ControlInputScaleChanged;
-		msg.floatParam = value;
-		_processor->pushMessage(msg);
-	}
-}
-
 dc::ControlMessage::Type dc::Module::getControlIoFlags(size_t index, bool isInput)
 {
 	IoType ioType = Control;
@@ -323,7 +302,7 @@ bool dc::Module::addIoInternal(std::vector<Io>& io, const std::string& descripti
 {
 	if (io.size() < MODULE_DEFAULT_MAX_IO)
 	{
-		io.push_back({ description, controlType, 1.0f });
+		io.push_back({ description, controlType });
 		return true;
 	}
 	return false;

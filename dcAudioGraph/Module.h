@@ -26,7 +26,6 @@ public:
 	{
 		std::string description = "";
 		ControlMessage::Type controlTypeFlags = ControlMessage::All;
-		float scale = 1.0f;
 	};
 
 	friend class Graph;
@@ -53,8 +52,6 @@ public:
 	// I/O
 	size_t getNumIo(IoType typeFlags) const;
 	std::string getIoDescription(IoType typeFlags, size_t index);
-	float getControlInputScale(size_t index);
-	void setControlInputScale(size_t index, float value);
 	ControlMessage::Type getControlIoFlags(size_t index, bool isInput);
 	bool setNumIo(IoType typeFlags, size_t n);
 	bool addIo(IoType typeFlags,
