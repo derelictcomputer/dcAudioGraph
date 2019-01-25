@@ -83,6 +83,8 @@ public:
 	size_t getNumChannels() const { return _channels.size(); }
 	void setNumChannels(size_t numChannels);
 
+	size_t getNumMessages(size_t channelIndex);
+
 	Channel::Iterator getIterator(size_t channelIdx);
 
 	void insert(ControlMessage& message, size_t channelIndex);

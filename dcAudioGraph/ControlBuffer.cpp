@@ -97,6 +97,15 @@ void dc::ControlBuffer::setNumChannels(size_t numChannels)
 	}
 }
 
+size_t dc::ControlBuffer::getNumMessages(size_t channelIndex)
+{
+    if (channelIndex < _channels.size())
+    {
+		return _channels[channelIndex].size();
+    }
+	return 0;
+}
+
 dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::getIterator(size_t channelIdx)
 {
 	if (channelIdx < _channels.size())
