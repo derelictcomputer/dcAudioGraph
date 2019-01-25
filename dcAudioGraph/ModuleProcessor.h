@@ -103,7 +103,7 @@ private:
 	MessageQueue<AddParamMessage> _addParamQueue{ MODULE_MAX_MESSAGES };
 	size_t _id = 0;
 	size_t _rev = 0;
-	double _sampleRate = 0;
+	double _sampleRate = 1; // this prevents some initialization bugs
 	size_t _blockSize = 0;
 	size_t _numAudioInputs = 0;
 	size_t _numAudioOutputs = 0;
