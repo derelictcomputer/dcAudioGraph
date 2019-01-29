@@ -19,7 +19,6 @@ struct ControlMessage final
 	{
 		Trigger = 0x0001,
 		Note	= 0x0002,
-		Float	= 0x0004,
 		None	= 0x0000,
 		All		= 0xffff
 	};
@@ -40,7 +39,6 @@ struct ControlMessage final
 	{
 		uint8_t noParam;
 		NoteParams noteParam;
-		float floatParam;
 	};
 };
 

@@ -1,18 +1,10 @@
-#include <cassert>
 #include "Module.h"
-
-dc::Module::Module(std::unique_ptr<ModuleProcessor> processor) : _processor(std::move(processor))
-{
-	assert(nullptr != _processor);
-}
+#include <algorithm>
 
 void dc::Module::setSampleRate(double sampleRate)
 {
 	_sampleRate = sampleRate;
-	ModuleProcessorMessage msg{};
-	msg.type = ModuleProcessorMessage::SampleRate;
-	msg.doubleParam = sampleRate;
-	_processor->pushMessage(msg);
+	updateProcessContext();
 }
 
 void dc::Module::setBlockSize(size_t blockSize)
@@ -23,12 +15,7 @@ void dc::Module::setBlockSize(size_t blockSize)
 	}
 
 	_blockSize = blockSize;
-
-	ModuleProcessorMessage msg{};
-	msg.type = ModuleProcessorMessage::BlockSize;
-	msg.sizeParam = blockSize;
-	_processor->pushMessage(msg);
-
+	updateProcessContext();
 	blockSizeChanged();
 }
 
@@ -58,6 +45,17 @@ size_t dc::Module::getNumIo(IoType typeFlags) const
 			numIo += _controlOutputs.size();
 		}
 	}
+    if (typeFlags & Event)
+    {
+        if (typeFlags & Input)
+        {
+			numIo += _eventInputs.size();
+        }
+        if (typeFlags & Output)
+        {
+			numIo += _eventOutputs.size();
+        }
+    }
 
 	return numIo;
 }
@@ -71,9 +69,9 @@ std::string dc::Module::getIoDescription(IoType typeFlags, size_t index)
 	return "";
 }
 
-dc::ControlMessage::Type dc::Module::getControlIoFlags(size_t index, bool isInput)
+dc::ControlMessage::Type dc::Module::getEventIoFlags(size_t index, bool isInput)
 {
-	IoType ioType = Control;
+	IoType ioType = Event;
 	if (isInput)
 	{
 		ioType = ioType | Input;
@@ -85,7 +83,7 @@ dc::ControlMessage::Type dc::Module::getControlIoFlags(size_t index, bool isInpu
 
 	if (auto* io = getIo(ioType, index))
 	{
-		return io->controlTypeFlags;
+		return io->eventTypeFlags;
 	}
 
 	return ControlMessage::None;
@@ -116,9 +114,23 @@ bool dc::Module::setNumIo(IoType typeFlags, size_t n)
 		{
 			success &= setNumIoInternal(_controlOutputs, n);
 		}
+	}	
+    if (typeFlags & Event)
+	{
+		if (typeFlags & Input)
+		{
+			success &= setNumIoInternal(_eventInputs, n);
+		}
+		if (typeFlags & Output)
+		{
+			success &= setNumIoInternal(_eventOutputs, n);
+		}
 	}
 
-	notifyIoChange(typeFlags);
+	if (success)
+	{
+		updateProcessContext();
+	}
 
 	return success;
 }
@@ -149,8 +161,22 @@ bool dc::Module::addIo(IoType typeFlags, const std::string& description, Control
 			success &= addIoInternal(_controlOutputs, description, controlType);
 		}
 	}
+	if (typeFlags & Event)
+	{
+		if (typeFlags & Input)
+		{
+			success &= addIoInternal(_eventInputs, description, controlType);
+		}
+		if (typeFlags & Output)
+		{
+			success &= addIoInternal(_eventOutputs, description, controlType);
+		}
+	}
 
-	notifyIoChange(typeFlags);
+	if (success)
+	{
+		updateProcessContext();
+	}
 
 	return success;
 }
@@ -181,8 +207,22 @@ bool dc::Module::removeIo(IoType typeFlags, size_t index)
 			success &= removeIoInternal(_controlOutputs, index);
 		}
 	}
+	if (typeFlags & Event)
+	{
+		if (typeFlags & Input)
+		{
+			success &= removeIoInternal(_eventInputs, index);
+		}
+		if (typeFlags & Output)
+		{
+			success &= removeIoInternal(_eventOutputs, index);
+		}
+	}
 
-	notifyIoChange(typeFlags);
+    if (success)
+    {
+		updateProcessContext();
+    }
 
 	return success;
 }
@@ -257,10 +297,6 @@ void dc::Module::setParamValue(size_t index, float value)
 	if (auto* p = getParam(index))
 	{
 		p->setRaw(value);
-		ModuleProcessorMessage msg{};
-		msg.type = ModuleProcessorMessage::ParamChanged;
-		msg.indexScalarParam = { index, p->getRaw() };
-		_processor->pushMessage(msg);
 	}
 }
 
@@ -268,7 +304,7 @@ void dc::Module::setParamValue(const std::string& id, float value)
 {
 	for (size_t i = 0; i < _params.size(); ++i)
 	{
-		if (_params[i].getId() == id)
+		if (_params[i]->getId() == id)
 		{
 			setParamValue(i, value);
 		}
@@ -323,17 +359,16 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 
 		if (hasControlInput)
 		{
-			if (!addIo(Control | Input, displayName, ControlMessage::Float))
+			if (!addIo(Control | Input, displayName))
 			{
 				return false;
 			}
 			inputIdx = static_cast<int>(_controlInputs.size()) - 1;
 		}
 
-		_params.emplace_back(id, displayName, range, serializable, inputIdx);
+		_params.emplace_back(std::make_unique<ModuleParam>(id, displayName, range, serializable, inputIdx));
 
-        const AddParamMessage msg{range, inputIdx};
-		_processor->pushMessage(msg);
+		updateProcessContext();
 
 		return true;
 	}
@@ -344,51 +379,45 @@ bool dc::Module::removeParam(size_t index)
 {
 	if (index < _params.size())
 	{
+		// stick the param into the release pool
+		_paramsToRelease.emplace_back(_params[index].release());
 		_params.erase(_params.begin() + index);
 
-		ModuleProcessorMessage msg{};
-		msg.type = ModuleProcessorMessage::RemoveParam;
-		msg.sizeParam = index;
-		_processor->pushMessage(msg);
+        // update the context
+		updateProcessContext();
 
 		return true;
 	}
 	return false;
 }
 
-void dc::Module::notifyIoChange(IoType typeFlags) const
+void dc::Module::updateProcessContext()
 {
-	ModuleProcessorMessage msg{};
-	if (typeFlags & Audio)
-	{
-		if (typeFlags & Input)
-		{
-			msg.type = ModuleProcessorMessage::NumAudioInputs;
-			msg.sizeParam = _audioInputs.size();
-			_processor->pushMessage(msg);
-		}
-		if (typeFlags & Output)
-		{
-			msg.type = ModuleProcessorMessage::NumAudioOutputs;
-			msg.sizeParam = _audioOutputs.size();
-			_processor->pushMessage(msg);
-		}
-	}
-	if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			msg.type = ModuleProcessorMessage::NumControlInputs;
-			msg.sizeParam = _controlInputs.size();
-			_processor->pushMessage(msg);
-		}
-		if (typeFlags & Output)
-		{
-			msg.type = ModuleProcessorMessage::NumControlOutputs;
-			msg.sizeParam = _controlOutputs.size();
-			_processor->pushMessage(msg);
-		}
-	}
+	auto newContext = std::make_shared<ModuleProcessContext>();
+
+	newContext->numAudioIn = _audioInputs.size();
+	newContext->numAudioOut = _audioOutputs.size();
+	newContext->numControlIn = _controlInputs.size();
+	newContext->numControlOut = _controlOutputs.size();
+	newContext->numEventIn = _eventInputs.size();
+	newContext->numEventOut = _eventOutputs.size();
+	newContext->blockSize = _blockSize;
+	newContext->sampleRate = _sampleRate;
+	newContext->audioBuffer.resize(_blockSize, std::max(_audioInputs.size(), _audioOutputs.size()));
+	newContext->controlBuffer.resize(_blockSize, std::max(_controlInputs.size(), _controlOutputs.size()));
+	newContext->eventBuffer.setNumChannels(std::max(_eventInputs.size(), _eventOutputs.size()));
+    for (auto& p : _params)
+    {
+		newContext->params.push_back(p.get());
+    }
+
+	// swap in the new context
+	newContext = std::atomic_exchange(&_processContext, newContext);
+	// spin here in case process() is still using the old context
+	while (newContext.use_count() > 1) {}
+
+	// now that the old context is gone, we can clear the released params
+	_paramsToRelease.clear();
 }
 
 dc::Module::Io* dc::Module::getIo(IoType typeFlags, size_t index)
@@ -427,6 +456,23 @@ dc::Module::Io* dc::Module::getIo(IoType typeFlags, size_t index)
 			}
 		}
 	}
+	else if (typeFlags & Event)
+	{
+		if (typeFlags & Input)
+		{
+			if (index < _eventInputs.size())
+			{
+				return &_eventInputs[index];
+			}
+		}
+		else if (typeFlags & Output)
+		{
+			if (index < _eventOutputs.size())
+			{
+				return &_eventOutputs[index];
+			}
+		}
+	}
 	return nullptr;
 }
 
@@ -434,7 +480,7 @@ dc::ModuleParam* dc::Module::getParam(size_t index)
 {
 	if (index < _params.size())
 	{
-		return &_params[index];
+		return _params[index].get();
 	}
 	return nullptr;
 }
@@ -443,19 +489,10 @@ dc::ModuleParam* dc::Module::getParam(const std::string& id)
 {
 	for (auto& param : _params)
 	{
-		if (param.getId() == id)
+		if (param->getId() == id)
 		{
-			return &param;
+			return param.get();
 		}
 	}
 	return nullptr;
-}
-
-void dc::Module::setId(size_t id)
-{
-	_id = id;
-	ModuleProcessorMessage msg{};
-	msg.type = ModuleProcessorMessage::Id;
-	msg.sizeParam = id;
-	_processor->pushMessage(msg);
 }

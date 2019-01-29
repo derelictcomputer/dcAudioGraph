@@ -11,7 +11,8 @@
 #include "../../dcAudioGraph/dcAudioGraph.h"
 
 dc::AudioBuffer audioBuffer;
-dc::ControlBuffer controlBuffer;
+dc::AudioBuffer controlBuffer;
+dc::ControlBuffer eventBuffer;
 const size_t nGraphIo = 2;
 
 int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer,
@@ -22,7 +23,7 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
 
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
     audioBuffer.fromInterleaved(inSamples, framesPerBuffer, nGraphIo, false);
-    graph->process(audioBuffer, controlBuffer);
+    graph->process(audioBuffer, controlBuffer, eventBuffer);
 	audioBuffer.toInterleaved(outSamples, framesPerBuffer, nGraphIo);
 	return paContinue;
 }
@@ -78,8 +79,8 @@ int main()
 		const auto inId = in->getId();
 		auto* out = graph.getOutputModule();
 		const auto outId = out->getId();
-		graph.addConnection({ inId, 0, outId, 0, dc::Connection::Audio });
-		graph.addConnection({ inId, 1, outId, 1, dc::Connection::Audio });
+		graph.addConnection({ inId, 0, outId, 0, dc::Connection::Type::Audio });
+		graph.addConnection({ inId, 1, outId, 1, dc::Connection::Type::Audio });
 	}
 
     PaStream* stream;

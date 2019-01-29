@@ -22,9 +22,6 @@
     <ClCompile Include="..\..\..\dcAudioGraph\Gain.cpp">
       <Filter>dcAudioGraph</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\dcAudioGraph\ModuleProcessor.cpp">
-      <Filter>dcAudioGraph</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h">
@@ -52,9 +49,6 @@
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\dcAudioGraph\MessageQueue.h">
-      <Filter>dcAudioGraph</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\dcAudioGraph\ModuleProcessor.h">
       <Filter>dcAudioGraph</Filter>
     </ClInclude>
   </ItemGroup>

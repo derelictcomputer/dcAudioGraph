@@ -1,17 +1,19 @@
 #pragma once
 
 #include <memory>
+#include "AudioBuffer.h"
+#include "ControlBuffer.h"
 #include "ModuleParam.h"
-#include "ModuleProcessor.h"
 
 namespace dc
 {
 enum IoType : uint8_t
 {
-	Audio = 0x01,
+	Audio   = 0x01,
 	Control = 0x02,
-	Input = 0x04,
-	Output = 0x08
+    Event   = 0x04,
+	Input   = 0x10,
+	Output  = 0x20
 };
 
 constexpr IoType operator|(const IoType lhs, const IoType rhs)
@@ -19,18 +21,23 @@ constexpr IoType operator|(const IoType lhs, const IoType rhs)
 	return static_cast<IoType>(static_cast<uint8_t>(lhs) | static_cast<uint8_t>(rhs));
 }
 
+const size_t MODULE_MAX_MESSAGES = 32;
+const size_t MODULE_DEFAULT_MAX_IO = 16;
+const size_t MODULE_DEFAULT_MAX_PARAMS = 16;
+const size_t MODULE_DEFAULT_MAX_BLOCK_SIZE = 2048;
+
 class Module
 {
 public:
 	struct Io
 	{
 		std::string description = "";
-		ControlMessage::Type controlTypeFlags = ControlMessage::All;
+		ControlMessage::Type eventTypeFlags = ControlMessage::All;
 	};
 
 	friend class Graph;
 
-	explicit Module(std::unique_ptr<ModuleProcessor> processor);
+	Module() = default;
 	virtual ~Module() = default;
 
 	Module(const Module&) = delete;
@@ -44,15 +51,12 @@ public:
 	size_t getId() const { return _id; }
 
 	void setSampleRate(double sampleRate);
-	double getSampleRate() const { return _sampleRate; }
-
 	void setBlockSize(size_t blockSize);
-	size_t getBlockSize() const { return _blockSize; }
 
 	// I/O
 	size_t getNumIo(IoType typeFlags) const;
 	std::string getIoDescription(IoType typeFlags, size_t index);
-	ControlMessage::Type getControlIoFlags(size_t index, bool isInput);
+	ControlMessage::Type getEventIoFlags(size_t index, bool isInput);
 	bool setNumIo(IoType typeFlags, size_t n);
 	bool addIo(IoType typeFlags,
 		const std::string& description = "",
@@ -72,6 +76,25 @@ public:
 	void setParamValue(const std::string& id, float value);
 
 protected:
+    struct ModuleProcessContext
+    {
+		size_t numAudioIn;
+		size_t numAudioOut;
+		size_t numControlIn;
+		size_t numControlOut;
+		size_t numEventIn;
+		size_t numEventOut;
+		size_t blockSize;
+		double sampleRate;
+		AudioBuffer audioBuffer;
+		AudioBuffer controlBuffer;
+		ControlBuffer eventBuffer;
+		std::vector<ModuleParam*> params;
+    };
+
+	virtual void process(ModuleProcessContext& context) {}
+
+    virtual void sampleRateChanged() {}
 	virtual void blockSizeChanged() {}
 
 	// I/O
@@ -85,25 +108,26 @@ protected:
 		bool serializable = false, bool hasControlInput = false);
 	bool removeParam(size_t index);
 
-	ModuleProcessor* getProcessor() const { return _processor.get(); }
-
 private:
-	void notifyIoChange(IoType typeFlags) const;
+	void updateProcessContext();
+
 	Io* getIo(IoType typeFlags, size_t index);
 	ModuleParam* getParam(size_t index);
 	ModuleParam* getParam(const std::string& id);
 
-	std::unique_ptr<ModuleProcessor> _processor;
 	double _sampleRate = 0;
 	size_t _blockSize = 0;
 	std::vector<Io> _audioInputs;
 	std::vector<Io> _audioOutputs;
 	std::vector<Io> _controlInputs;
 	std::vector<Io> _controlOutputs;
-	std::vector<ModuleParam> _params;
+	std::vector<Io> _eventInputs;
+	std::vector<Io> _eventOutputs;
+	std::vector<std::unique_ptr<ModuleParam>> _params;
+	std::vector<std::unique_ptr<ModuleParam>> _paramsToRelease;
+	std::shared_ptr<ModuleProcessContext> _processContext;
 
 	// for the Graph
-	void setId(size_t id);
 	size_t _id = 0;
 };
 }

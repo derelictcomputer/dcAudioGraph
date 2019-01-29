@@ -13,10 +13,11 @@ namespace dc
 {
 struct Connection final
 {
-	enum Type
+	enum class Type
 	{
-		Audio = 0,
-		Control
+		Audio,
+		Control,
+        Event
 	};
 
 	bool operator==(const Connection& other) const;
@@ -29,59 +30,15 @@ struct Connection final
 	Type type;
 };
 
-struct GraphProcessorMessage
-{
-	enum Type
-	{
-		InputModule,
-		OutputModule,
-		AddModule,
-		RemoveModule,
-		AddConnection,
-		RemoveConnection
-	};
-
-	Type type;
-
-	union
-	{
-		ModuleProcessor* moduleParam;
-		Connection connectionParam;
-	};
-};
-
-class GraphProcessor : public ModuleProcessor
-{
-public:
-	explicit GraphProcessor(Graph& parent) : _parent(parent) {}
-
-	void incRev() { ++_rev; }
-	bool pushGraphMessage(const GraphProcessorMessage& msg);
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
-
-private:
-	void handleGraphMessages();
-	void processModule(ModuleProcessor* proc);
-	ModuleProcessor* getModuleById(size_t id);
-	bool getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections);
-
-	Graph& _parent;
-	MessageQueue<GraphProcessorMessage> _graphMessageQueue{ MODULE_MAX_MESSAGES };
-	ModuleProcessor* _input = nullptr;
-	ModuleProcessor* _output = nullptr;
-	std::vector<ModuleProcessor*> _processors;
-	std::vector<Connection> _connections;
-};
-
 class Graph final : public Module
 {
 public:
 	Graph();
 
-	void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) const;
+	void process(AudioBuffer& audio, AudioBuffer& control, ControlBuffer& events) const;
 
-	Module* getInputModule() { return &_input; }
-	Module* getOutputModule() { return &_output; }
+	Module* getInputModule() { return &_inputModule; }
+	Module* getOutputModule() { return &_outputModule; }
 
 	size_t addModule(std::unique_ptr<Module> module);
 	size_t getNumModules() const { return _modules.size(); }
@@ -98,20 +55,14 @@ public:
 	bool getConnection(size_t index, Connection& connectionOut);
 	void disconnectModule(size_t id);
 
-	void setReadyToReleaseModules() { _readyToRelease.test_and_set(); }
+protected:
+	void process(ModuleProcessContext& context) override;
 
 private:
 	// Just a passthrough for processing graph I/O
 	// This also provides a way to connect modules in the graph to the outside world
 	class GraphIoModule final : public Module
 	{
-	public:
-		class DummyProcessor : public ModuleProcessor
-		{
-			void process(AudioBuffer& /*audioBuffer*/, ControlBuffer& /*controlBuffer*/) override {}
-		};
-
-		GraphIoModule() : Module(std::make_unique<DummyProcessor>()) {}
 	};
 
 	void blockSizeChanged() override;
@@ -125,25 +76,36 @@ private:
 	bool getInputConnectionsForModule(Module& m, std::vector<Connection>& connections);
 
 	bool removeModuleInternal(size_t index);
-	void releaseRemovedModules();
 
-	GraphProcessor* _graphProcessor;
-	GraphIoModule _input;
-	GraphIoModule _output;
+	struct ModuleRenderInfo final
+	{
+		struct InputInfo
+		{
+			Module* module;
+			Connection::Type type;
+			size_t fromIdx;
+			size_t toIdx;
+		};
+
+		Module* module = nullptr;
+		std::vector<InputInfo> inputs;
+	};
+
+	struct GraphProcessContext final
+	{
+		std::vector<ModuleRenderInfo> modules;
+	};
+
+	static void processModule(ModuleRenderInfo& m);
+	void updateGraphProcessContext();
+	ModuleRenderInfo makeModuleRenderInfo(Module& m);
+
+	GraphIoModule _inputModule;
+	GraphIoModule _outputModule;
 	std::vector<std::unique_ptr<Module>> _modules;
     std::vector<Connection> _allConnections;
-
-    // this is here to avoid deleting ModuleProcessors while the GraphProcessor is using them.
-    // Order of operations for a "removeModule" call:
-    //      1. Clear out the release pool if the flag is set
-    //      2. Disconnect the module
-    //      3. Tell the GraphProcessor the module went away
-    //      4. Stick the module in the release pool
-    //      5. Clear the flag
-    //
-    // Note: this means there's usually going to be a Module hanging around in the release pool.
-	std::vector<std::unique_ptr<Module>> _moduleReleasePool;
-	std::atomic_flag _readyToRelease = ATOMIC_FLAG_INIT;
+	std::shared_ptr<GraphProcessContext> _graphProcessContext;
+	std::vector<std::unique_ptr<Module>> _modulesToRelease;
 
 	size_t _nextModuleId = 1;
 };
