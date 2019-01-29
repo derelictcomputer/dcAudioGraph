@@ -66,7 +66,7 @@ private:
 	};
 
 	void blockSizeChanged() override;
-	bool addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType) override;
+	bool addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType) override;
 	bool removeIoInternal(std::vector<Io>& io, size_t index) override;
 
 	bool getModulesForConnection(const Connection& connection, Module*& from, Module*& to);

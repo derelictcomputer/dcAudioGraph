@@ -10,7 +10,7 @@ namespace dc
 {
 // A single message
 // This can be a trigger or a MIDI-style note
-struct Event final
+struct EventMessage final
 {
 	// Specifies the type of the message.
 	// Also acts as a bitfield for filtering message types in other things.
@@ -28,8 +28,8 @@ struct Event final
 		float gain = 1.0f;
 	};
 
-	Event();
-	explicit Event(Type type, size_t sampleOffset);
+	EventMessage();
+	explicit EventMessage(Type type, size_t sampleOffset);
 
 	Type type;
 	size_t sampleOffset;
@@ -51,7 +51,7 @@ public:
 		{
 		public:
 			explicit Iterator(Channel& channel);
-			bool next(Event& messageOut);
+			bool next(EventMessage& messageOut);
 
 			static Iterator invalid;
 
@@ -69,12 +69,12 @@ public:
 		size_t size() const { return _messages.size(); };
 		Iterator getIterator() { return Iterator(*this); }
 
-		void insert(Event& message);
+		void insert(EventMessage& message);
 		void merge(Channel& other);
 		void clear();
 
 	private:
-		std::vector<Event> _messages;
+		std::vector<EventMessage> _messages;
 	};
 
 	size_t getNumChannels() const { return _channels.size(); }
@@ -84,7 +84,7 @@ public:
 
 	Channel::Iterator getIterator(size_t channelIdx);
 
-	void insert(Event& message, size_t channelIndex);
+	void insert(EventMessage& message, size_t channelIndex);
 	void merge(EventBuffer& from);
 	void merge(EventBuffer& from, size_t fromIndex, size_t toIndex);
 	void clear();

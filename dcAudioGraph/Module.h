@@ -32,7 +32,7 @@ public:
 	struct Io
 	{
 		std::string description = "";
-		Event::Type eventTypeFlags = Event::All;
+		EventMessage::Type eventTypeFlags = EventMessage::All;
 	};
 
 	friend class Graph;
@@ -56,11 +56,11 @@ public:
 	// I/O
 	size_t getNumIo(IoType typeFlags) const;
 	std::string getIoDescription(IoType typeFlags, size_t index);
-	Event::Type getEventIoFlags(size_t index, bool isInput);
+	EventMessage::Type getEventIoFlags(size_t index, bool isInput);
 	bool setNumIo(IoType typeFlags, size_t n);
 	bool addIo(IoType typeFlags,
 		const std::string& description = "",
-		Event::Type controlType = Event::None);
+		EventMessage::Type controlType = EventMessage::None);
 	bool removeIo(IoType typeFlags, size_t index);
 
 	// Params
@@ -99,7 +99,7 @@ protected:
 
 	// I/O
 	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
-	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType);
+	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType);
 	virtual bool removeIoInternal(std::vector<Io>& io, size_t index);
 
 	// Params

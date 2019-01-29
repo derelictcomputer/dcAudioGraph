@@ -69,7 +69,7 @@ std::string dc::Module::getIoDescription(IoType typeFlags, size_t index)
 	return "";
 }
 
-dc::Event::Type dc::Module::getEventIoFlags(size_t index, bool isInput)
+dc::EventMessage::Type dc::Module::getEventIoFlags(size_t index, bool isInput)
 {
 	IoType ioType = Event;
 	if (isInput)
@@ -86,7 +86,7 @@ dc::Event::Type dc::Module::getEventIoFlags(size_t index, bool isInput)
 		return io->eventTypeFlags;
 	}
 
-	return Event::None;
+	return EventMessage::None;
 }
 
 bool dc::Module::setNumIo(IoType typeFlags, size_t n)
@@ -135,7 +135,7 @@ bool dc::Module::setNumIo(IoType typeFlags, size_t n)
 	return success;
 }
 
-bool dc::Module::addIo(IoType typeFlags, const std::string& description, Event::Type controlType)
+bool dc::Module::addIo(IoType typeFlags, const std::string& description, EventMessage::Type controlType)
 {
 	bool success = true;
 
@@ -322,7 +322,7 @@ bool dc::Module::setNumIoInternal(std::vector<Io>& io, size_t n)
 	}
 	while (n > io.size())
 	{
-		if (!addIoInternal(io, "", Event::All))
+		if (!addIoInternal(io, "", EventMessage::All))
 		{
 			return false;
 		}
@@ -330,7 +330,7 @@ bool dc::Module::setNumIoInternal(std::vector<Io>& io, size_t n)
 	return true;
 }
 
-bool dc::Module::addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType)
+bool dc::Module::addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType)
 {
 	if (io.size() < MODULE_DEFAULT_MAX_IO)
 	{

@@ -307,7 +307,7 @@ void dc::Graph::blockSizeChanged()
 	}
 }
 
-bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType)
+bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType)
 {
 	if (!Module::addIoInternal(io, description, controlType))
 	{

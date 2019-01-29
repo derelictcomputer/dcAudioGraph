@@ -1,11 +1,11 @@
 #include "EventBuffer.h"
 
-dc::Event::Event() : type(Type::Trigger), sampleOffset(0)
+dc::EventMessage::EventMessage() : type(Type::Trigger), sampleOffset(0)
 {
 	noParam = 0;
 }
 
-dc::Event::Event(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
+dc::EventMessage::EventMessage(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
 {
 	// ensure a valid type is used
 	switch (type)
@@ -29,7 +29,7 @@ dc::EventBuffer::Channel::Iterator::Iterator(Channel& channel) : _channel(channe
 {
 }
 
-bool dc::EventBuffer::Channel::Iterator::next(Event& messageOut)
+bool dc::EventBuffer::Channel::Iterator::next(EventMessage& messageOut)
 {
 	if (_channel._messages.empty() || _next >= _channel._messages.size())
 	{
@@ -50,7 +50,7 @@ dc::EventBuffer::Channel::Channel()
 	_messages.reserve(1024);
 }
 
-void dc::EventBuffer::Channel::insert(Event& message)
+void dc::EventBuffer::Channel::insert(EventMessage& message)
 {
 	// keep the buffer in order of sample offset
 	// TODO: faster insert, in case this gets used for large numbers of messages
@@ -69,7 +69,7 @@ void dc::EventBuffer::Channel::insert(Event& message)
 void dc::EventBuffer::Channel::merge(Channel& other)
 {
 	Iterator otherIt(other);
-	Event msg;
+	EventMessage msg;
 	while (otherIt.next(msg))
 	{
 		insert(msg);
@@ -111,7 +111,7 @@ dc::EventBuffer::Channel::Iterator dc::EventBuffer::getIterator(size_t channelId
 	return Channel::Iterator::invalid;
 }
 
-void dc::EventBuffer::insert(Event& message, size_t channelIndex)
+void dc::EventBuffer::insert(EventMessage& message, size_t channelIndex)
 {
 	if (channelIndex < _channels.size())
 	{
