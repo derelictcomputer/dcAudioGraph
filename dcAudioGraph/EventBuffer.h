@@ -1,5 +1,5 @@
 /*
- * A buffer of control messages.
+ * A buffer of event messages.
  */
 
 #pragma once
@@ -8,10 +8,9 @@
 
 namespace dc
 {
-// A single message in a control buffer.
-// This can be something like a trigger, or a continuous parameter
-// Implemented as a tagged union for simplicity and memory efficiency
-struct ControlMessage final
+// A single message
+// This can be a trigger or a MIDI-style note
+struct Event final
 {
 	// Specifies the type of the message.
 	// Also acts as a bitfield for filtering message types in other things.
@@ -29,8 +28,8 @@ struct ControlMessage final
 		float gain = 1.0f;
 	};
 
-	ControlMessage();
-	explicit ControlMessage(Type type, size_t sampleOffset);
+	Event();
+	explicit Event(Type type, size_t sampleOffset);
 
 	Type type;
 	size_t sampleOffset;
@@ -42,7 +41,7 @@ struct ControlMessage final
 	};
 };
 
-class ControlBuffer final
+class EventBuffer final
 {
 public:
 	class Channel final
@@ -52,7 +51,7 @@ public:
 		{
 		public:
 			explicit Iterator(Channel& channel);
-			bool next(ControlMessage& messageOut);
+			bool next(Event& messageOut);
 
 			static Iterator invalid;
 
@@ -70,12 +69,12 @@ public:
 		size_t size() const { return _messages.size(); };
 		Iterator getIterator() { return Iterator(*this); }
 
-		void insert(ControlMessage& message);
+		void insert(Event& message);
 		void merge(Channel& other);
 		void clear();
 
 	private:
-		std::vector<ControlMessage> _messages;
+		std::vector<Event> _messages;
 	};
 
 	size_t getNumChannels() const { return _channels.size(); }
@@ -85,9 +84,9 @@ public:
 
 	Channel::Iterator getIterator(size_t channelIdx);
 
-	void insert(ControlMessage& message, size_t channelIndex);
-	void merge(ControlBuffer& from);
-	void merge(ControlBuffer& from, size_t fromIndex, size_t toIndex);
+	void insert(Event& message, size_t channelIndex);
+	void merge(EventBuffer& from);
+	void merge(EventBuffer& from, size_t fromIndex, size_t toIndex);
 	void clear();
 	void clear(size_t channelIndex);
 

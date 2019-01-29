@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "AudioBuffer.h"
-#include "ControlBuffer.h"
+#include "EventBuffer.h"
 #include "ModuleParam.h"
 
 namespace dc
@@ -32,7 +32,7 @@ public:
 	struct Io
 	{
 		std::string description = "";
-		ControlMessage::Type eventTypeFlags = ControlMessage::All;
+		Event::Type eventTypeFlags = Event::All;
 	};
 
 	friend class Graph;
@@ -56,11 +56,11 @@ public:
 	// I/O
 	size_t getNumIo(IoType typeFlags) const;
 	std::string getIoDescription(IoType typeFlags, size_t index);
-	ControlMessage::Type getEventIoFlags(size_t index, bool isInput);
+	Event::Type getEventIoFlags(size_t index, bool isInput);
 	bool setNumIo(IoType typeFlags, size_t n);
 	bool addIo(IoType typeFlags,
 		const std::string& description = "",
-		ControlMessage::Type controlType = ControlMessage::None);
+		Event::Type controlType = Event::None);
 	bool removeIo(IoType typeFlags, size_t index);
 
 	// Params
@@ -88,7 +88,7 @@ protected:
 		double sampleRate;
 		AudioBuffer audioBuffer;
 		AudioBuffer controlBuffer;
-		ControlBuffer eventBuffer;
+		EventBuffer eventBuffer;
 		std::vector<ModuleParam*> params;
     };
 
@@ -99,7 +99,7 @@ protected:
 
 	// I/O
 	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
-	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType);
+	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType);
 	virtual bool removeIoInternal(std::vector<Io>& io, size_t index);
 
 	// Params

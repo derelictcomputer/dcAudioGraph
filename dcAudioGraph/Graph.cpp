@@ -23,7 +23,7 @@ void dc::Graph::process(ModuleProcessContext& context)
 	process(context.audioBuffer, context.controlBuffer, context.eventBuffer);
 }
 
-void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, ControlBuffer& events) const
+void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& events) const
 {
 	// get the context
 	auto context = std::atomic_load(&_graphProcessContext);
@@ -307,7 +307,7 @@ void dc::Graph::blockSizeChanged()
 	}
 }
 
-bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType)
+bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType)
 {
 	if (!Module::addIoInternal(io, description, controlType))
 	{

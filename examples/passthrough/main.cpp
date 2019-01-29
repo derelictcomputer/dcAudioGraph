@@ -12,7 +12,7 @@
 
 dc::AudioBuffer audioBuffer;
 dc::AudioBuffer controlBuffer;
-dc::ControlBuffer eventBuffer;
+dc::EventBuffer eventBuffer;
 const size_t nGraphIo = 2;
 
 int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer,

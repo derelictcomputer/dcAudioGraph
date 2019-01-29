@@ -57,7 +57,7 @@ TEST(Graph, PassthroughBasic)
 	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
 	AudioBuffer controlBuffer;
-	ControlBuffer eventBuffer;
+	EventBuffer eventBuffer;
 
 	Graph g;
 	makeBasicGraph(g, numIo);
@@ -80,7 +80,7 @@ TEST(Graph, PassthroughBasicLoop)
 	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
 	AudioBuffer controlBuffer;
-	ControlBuffer eventBuffer;
+	EventBuffer eventBuffer;
 
 	Graph g;
 	makeBasicGraph(g, numIo);

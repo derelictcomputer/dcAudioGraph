@@ -35,7 +35,7 @@ class Graph final : public Module
 public:
 	Graph();
 
-	void process(AudioBuffer& audio, AudioBuffer& control, ControlBuffer& events) const;
+	void process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& events) const;
 
 	Module* getInputModule() { return &_inputModule; }
 	Module* getOutputModule() { return &_outputModule; }
@@ -66,7 +66,7 @@ private:
 	};
 
 	void blockSizeChanged() override;
-	bool addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType) override;
+	bool addIoInternal(std::vector<Io>& io, const std::string& description, Event::Type controlType) override;
 	bool removeIoInternal(std::vector<Io>& io, size_t index) override;
 
 	bool getModulesForConnection(const Connection& connection, Module*& from, Module*& to);
