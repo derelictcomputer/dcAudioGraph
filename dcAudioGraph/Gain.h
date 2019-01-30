@@ -15,7 +15,5 @@ public:
 
 private:
     void process(ModuleProcessContext& context) override;
-
-	float _lastKnobValue = 0.0f;
 };
 }

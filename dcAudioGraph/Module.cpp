@@ -236,81 +236,6 @@ std::string dc::Module::getParamId(size_t index)
 	return "";
 }
 
-std::string dc::Module::getParamDisplayName(size_t index)
-{
-	if (auto* p = getParam(index))
-	{
-		return p->getDisplayName();
-	}
-	return "";
-}
-
-std::string dc::Module::getParamDisplayName(const std::string& id)
-{
-	if (auto* p = getParam(id))
-	{
-		return p->getDisplayName();
-	}
-	return "";
-}
-
-bool dc::Module::getParamRange(size_t index, ParamRange& rangeOut)
-{
-	if (auto* p = getParam(index))
-	{
-		rangeOut = p->getRange();
-		return true;
-	}
-	return false;
-}
-
-bool dc::Module::getParamRange(const std::string& id, ParamRange& rangeOut)
-{
-	if (auto* p = getParam(id))
-	{
-		rangeOut = p->getRange();
-		return true;
-	}
-	return false;
-}
-
-float dc::Module::getParamValue(size_t index)
-{
-	if (auto* p = getParam(index))
-	{
-		return p->getRaw();
-	}
-	return 0.0f;
-}
-
-float dc::Module::getParamValue(const std::string& id)
-{
-	if (auto* p = getParam(id))
-	{
-		return p->getRaw();
-	}
-	return 0.0f;
-}
-
-void dc::Module::setParamValue(size_t index, float value)
-{
-	if (auto* p = getParam(index))
-	{
-		p->setRaw(value);
-	}
-}
-
-void dc::Module::setParamValue(const std::string& id, float value)
-{
-	for (size_t i = 0; i < _params.size(); ++i)
-	{
-		if (_params[i]->getId() == id)
-		{
-			setParamValue(i, value);
-		}
-	}
-}
-
 bool dc::Module::setNumIoInternal(std::vector<Io>& io, size_t n)
 {
 	while (n < io.size())
@@ -351,7 +276,7 @@ bool dc::Module::removeIoInternal(std::vector<Io>& io, size_t index)
 }
 
 bool dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
-	bool serializable, bool hasControlInput)
+	bool serializable, bool hasControlInput, float initialValue)
 {
 	if (_params.size() < MODULE_DEFAULT_MAX_PARAMS)
 	{
@@ -366,7 +291,7 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 			inputIdx = static_cast<int>(_controlInputs.size()) - 1;
 		}
 
-		_params.emplace_back(std::make_unique<ModuleParam>(id, displayName, range, serializable, inputIdx));
+		_params.emplace_back(std::make_unique<ModuleParam>(id, displayName, range, serializable, inputIdx, initialValue));
 
 		updateProcessContext();
 

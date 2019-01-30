@@ -88,14 +88,15 @@ float dc::ParamRange::getRawLinear(float normalizedValue, float min, float max)
 }
 
 dc::ModuleParam::ModuleParam(std::string id, std::string displayName, const ParamRange& range,
-	bool serializable, int controlInputIndex) :
+	bool serializable, int controlInputIndex, float initialValue) :
 	_id(std::move(id)),
 	_displayName(std::move(displayName)),
 	_range(range),
 	_serializable(serializable),
-	_controlInputIndex(controlInputIndex),
-    _value(_range.getMin())
+	_controlInputIndex(controlInputIndex)
 {
+	_value = std::max(_range.getMin(), std::min(_range.getMax(), initialValue));
+	initSmoothing();
 }
 
 dc::ModuleParam::ModuleParam(const ModuleParam& other) :
@@ -106,7 +107,7 @@ _serializable(other._serializable),
 _controlInputIndex(other._controlInputIndex),
 _value(other._value.load())
 {
-
+	initSmoothing();
 }
 
 dc::ModuleParam& dc::ModuleParam::operator=(const ModuleParam& other)
@@ -136,4 +137,35 @@ void dc::ModuleParam::setNormalized(float normalizedValue)
 void dc::ModuleParam::setRaw(float rawValue)
 {
 	_value = _range.constrainRaw(rawValue);
+}
+
+void dc::ModuleParam::setControlScale(float scale)
+{
+	_controlScale = std::max(-1.0f, std::min(1.0f, scale));
+}
+
+void dc::ModuleParam::initSmoothing()
+{
+	_normStart = getNormalized();
+	_normEnd = _normStart;
+	_normInc = 0.0f;
+}
+
+void dc::ModuleParam::updateSmoothing(size_t numSamples)
+{
+	_normStart = _normEnd;
+	_normEnd = getNormalized();
+	_normInc = (_normEnd - _normStart) / numSamples;
+}
+
+float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
+{
+	return _range.getRaw(_normStart + _normInc * sampleOffset);
+}
+
+float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset, float controlSample) const
+{
+	const float smoothed = _normStart + _normInc * sampleOffset;
+    const float ctlRange = _controlScale < 0.0f ? smoothed : 1.0f - smoothed;
+	return _range.getRaw(smoothed + controlSample * _controlScale * ctlRange);
 }

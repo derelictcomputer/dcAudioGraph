@@ -55,7 +55,7 @@ class ModuleParam final
 {
 public:
 	ModuleParam(std::string id, std::string displayName, const ParamRange& range,
-		bool serializable = false, int controlInputIndex = -1);
+		bool serializable = false, int controlInputIndex = -1, float initialValue = 0.0f);
 
 	ModuleParam(const ModuleParam& other);
 	ModuleParam& operator=(const ModuleParam& other);
@@ -73,6 +73,15 @@ public:
 	float getRaw() const { return _value; }
 	void setRaw(float rawValue);
 
+	float getControlScale() const { return _controlScale.load(); }
+	void setControlScale(float scale);
+
+    // for use by a Module's process() to get smoothed values with or without control combination
+	void initSmoothing();
+	void updateSmoothing(size_t numSamples);
+	float getSmoothedRaw(size_t sampleOffset) const;
+	float getSmoothedRaw(size_t sampleOffset, float controlSample) const;
+
 	const ParamRange& getRange() const { return _range; }
 
 private:
@@ -81,6 +90,13 @@ private:
 	ParamRange _range;
 	bool _serializable = false;
 	int _controlInputIndex = -1;
+
 	std::atomic<float> _value{ 0.0f };
+	std::atomic<float> _controlScale{ 0.0f };
+
+    // for smoothing
+	float _normStart = 0.0f;
+	float _normEnd = 0.0f;
+	float _normInc = 0.0f;
 };
 }

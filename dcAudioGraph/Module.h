@@ -68,14 +68,8 @@ public:
 	// Params
 	size_t getNumParams() const { return _params.size(); }
 	std::string getParamId(size_t index);
-	std::string getParamDisplayName(size_t index);
-	std::string getParamDisplayName(const std::string& id);
-	bool getParamRange(size_t index, ParamRange& rangeOut);
-	bool getParamRange(const std::string& id, ParamRange& rangeOut);
-	float getParamValue(size_t index);
-	float getParamValue(const std::string& id);
-	void setParamValue(size_t index, float value);
-	void setParamValue(const std::string& id, float value);
+	ModuleParam* getParam(size_t index);
+	ModuleParam* getParam(const std::string& id);
 
 protected:
     struct ModuleProcessContext
@@ -107,15 +101,13 @@ protected:
 	// Params
 	bool addParam(const std::string& id, const std::string& displayName,
 		const ParamRange& range,
-		bool serializable = false, bool hasControlInput = false);
+		bool serializable = false, bool hasControlInput = false, float initialValue = 0.0f);
 	bool removeParam(size_t index);
 
 private:
 	void updateProcessContext();
 
 	Io* getIo(IoType typeFlags, size_t index);
-	ModuleParam* getParam(size_t index);
-	ModuleParam* getParam(const std::string& id);
 
 	double _sampleRate = 0;
 	size_t _blockSize = 0;
