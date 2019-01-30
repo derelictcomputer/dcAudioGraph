@@ -51,7 +51,9 @@ public:
 	size_t getId() const { return _id; }
 
 	void setSampleRate(double sampleRate);
+	double getSampleRate() const { return _sampleRate; }
 	void setBlockSize(size_t blockSize);
+	size_t getBlockSize() const { return _blockSize; }
 
 	// I/O
 	size_t getNumIo(IoType typeFlags) const;

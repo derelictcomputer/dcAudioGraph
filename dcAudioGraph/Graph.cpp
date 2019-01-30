@@ -82,7 +82,7 @@ void dc::Graph::processModule(ModuleRenderInfo& m)
     }
 
 	// if this module has inputs, pull in the input data
-	if (!m.inputs.empty())
+    if (ctx->numAudioIn > 0 || ctx->numControlIn > 0 || ctx->numEventIn > 0)
 	{
 		ctx->audioBuffer.zero();
 		ctx->controlBuffer.zero();
