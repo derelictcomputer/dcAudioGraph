@@ -20,23 +20,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dcAudioGraph\AudioBuffer.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\ControlBuffer.cpp" />
+    <ClCompile Include="..\..\..\dcAudioGraph\EventBuffer.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Gain.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Graph.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\LevelMeter.cpp" />
-    <ClCompile Include="..\..\..\dcAudioGraph\ModuleProcessor.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\ModuleParam.cpp" />
     <ClCompile Include="..\..\..\dcAudioGraph\Module.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dcAudioGraph\AudioBuffer.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\ControlBuffer.h" />
+    <ClInclude Include="..\..\..\dcAudioGraph\EventBuffer.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\dcAudioGraph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Gain.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Graph.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\LevelMeter.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\MessageQueue.h" />
-    <ClInclude Include="..\..\..\dcAudioGraph\ModuleProcessor.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\ModuleParam.h" />
     <ClInclude Include="..\..\..\dcAudioGraph\Module.h" />
   </ItemGroup>

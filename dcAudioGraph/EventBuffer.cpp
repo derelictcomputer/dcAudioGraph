@@ -1,11 +1,11 @@
-#include "ControlBuffer.h"
+#include "EventBuffer.h"
 
-dc::ControlMessage::ControlMessage() : type(Type::Trigger), sampleOffset(0)
+dc::EventMessage::EventMessage() : type(Type::Trigger), sampleOffset(0)
 {
 	noParam = 0;
 }
 
-dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
+dc::EventMessage::EventMessage(Type type, size_t sampleOffset) : sampleOffset(sampleOffset)
 {
 	// ensure a valid type is used
 	switch (type)
@@ -13,10 +13,6 @@ dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffse
 	case Type::Note:
 		this->type = type;
 		noteParam = { 0, 1.0f };
-		break;
-	case Type::Float:
-		this->type = type;
-		floatParam = 0.0f;
 		break;
 	case Type::Trigger:
 	default:
@@ -26,14 +22,14 @@ dc::ControlMessage::ControlMessage(Type type, size_t sampleOffset) : sampleOffse
 	}
 }
 
-dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::Channel::Iterator::invalid;
-dc::ControlBuffer::Channel dc::ControlBuffer::Channel::Iterator::_invalidChannel;
+dc::EventBuffer::Channel::Iterator dc::EventBuffer::Channel::Iterator::invalid;
+dc::EventBuffer::Channel dc::EventBuffer::Channel::Iterator::_invalidChannel;
 
-dc::ControlBuffer::Channel::Iterator::Iterator(Channel& channel) : _channel(channel)
+dc::EventBuffer::Channel::Iterator::Iterator(Channel& channel) : _channel(channel)
 {
 }
 
-bool dc::ControlBuffer::Channel::Iterator::next(ControlMessage& messageOut)
+bool dc::EventBuffer::Channel::Iterator::next(EventMessage& messageOut)
 {
 	if (_channel._messages.empty() || _next >= _channel._messages.size())
 	{
@@ -43,18 +39,18 @@ bool dc::ControlBuffer::Channel::Iterator::next(ControlMessage& messageOut)
 	return true;
 }
 
-dc::ControlBuffer::Channel::Iterator::Iterator() : _channel(_invalidChannel)
+dc::EventBuffer::Channel::Iterator::Iterator() : _channel(_invalidChannel)
 {
 }
 
-dc::ControlBuffer::Channel::Channel()
+dc::EventBuffer::Channel::Channel()
 {
 	// try to avoid re-allocations in the process chain
 	// TODO: this should be configurable somewhere
 	_messages.reserve(1024);
 }
 
-void dc::ControlBuffer::Channel::insert(ControlMessage& message)
+void dc::EventBuffer::Channel::insert(EventMessage& message)
 {
 	// keep the buffer in order of sample offset
 	// TODO: faster insert, in case this gets used for large numbers of messages
@@ -70,22 +66,22 @@ void dc::ControlBuffer::Channel::insert(ControlMessage& message)
 	_messages.push_back(message);
 }
 
-void dc::ControlBuffer::Channel::merge(Channel& other)
+void dc::EventBuffer::Channel::merge(Channel& other)
 {
 	Iterator otherIt(other);
-	ControlMessage msg;
+	EventMessage msg;
 	while (otherIt.next(msg))
 	{
 		insert(msg);
 	}
 }
 
-void dc::ControlBuffer::Channel::clear()
+void dc::EventBuffer::Channel::clear()
 {
 	_messages.clear();
 }
 
-void dc::ControlBuffer::setNumChannels(size_t numChannels)
+void dc::EventBuffer::setNumChannels(size_t numChannels)
 {
 	while (numChannels < _channels.size())
 	{
@@ -97,7 +93,7 @@ void dc::ControlBuffer::setNumChannels(size_t numChannels)
 	}
 }
 
-size_t dc::ControlBuffer::getNumMessages(size_t channelIndex)
+size_t dc::EventBuffer::getNumMessages(size_t channelIndex)
 {
     if (channelIndex < _channels.size())
     {
@@ -106,7 +102,7 @@ size_t dc::ControlBuffer::getNumMessages(size_t channelIndex)
 	return 0;
 }
 
-dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::getIterator(size_t channelIdx)
+dc::EventBuffer::Channel::Iterator dc::EventBuffer::getIterator(size_t channelIdx)
 {
 	if (channelIdx < _channels.size())
 	{
@@ -115,7 +111,7 @@ dc::ControlBuffer::Channel::Iterator dc::ControlBuffer::getIterator(size_t chann
 	return Channel::Iterator::invalid;
 }
 
-void dc::ControlBuffer::insert(ControlMessage& message, size_t channelIndex)
+void dc::EventBuffer::insert(EventMessage& message, size_t channelIndex)
 {
 	if (channelIndex < _channels.size())
 	{
@@ -123,7 +119,7 @@ void dc::ControlBuffer::insert(ControlMessage& message, size_t channelIndex)
 	}
 }
 
-void dc::ControlBuffer::merge(ControlBuffer& from)
+void dc::EventBuffer::merge(EventBuffer& from)
 {
 	for (size_t i = 0; i < _channels.size(); ++i)
 	{
@@ -134,7 +130,7 @@ void dc::ControlBuffer::merge(ControlBuffer& from)
 	}
 }
 
-void dc::ControlBuffer::merge(ControlBuffer& from, size_t fromIndex, size_t toIndex)
+void dc::EventBuffer::merge(EventBuffer& from, size_t fromIndex, size_t toIndex)
 {
 	if (fromIndex < from.getNumChannels() && toIndex < getNumChannels())
 	{
@@ -142,7 +138,7 @@ void dc::ControlBuffer::merge(ControlBuffer& from, size_t fromIndex, size_t toIn
 	}
 }
 
-void dc::ControlBuffer::clear()
+void dc::EventBuffer::clear()
 {
 	for (auto& channel : _channels)
 	{
@@ -150,7 +146,7 @@ void dc::ControlBuffer::clear()
 	}
 }
 
-void dc::ControlBuffer::clear(size_t channelIndex)
+void dc::EventBuffer::clear(size_t channelIndex)
 {
 	if (channelIndex < _channels.size())
 	{

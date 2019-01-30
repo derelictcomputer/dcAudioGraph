@@ -1,5 +1,6 @@
 #include "Graph.h"
 #include <algorithm>
+#include <cassert>
 
 bool dc::Connection::operator==(const Connection& other) const
 {
@@ -10,207 +11,160 @@ bool dc::Connection::operator==(const Connection& other) const
 		type == other.type;
 }
 
-bool dc::GraphProcessor::pushGraphMessage(const GraphProcessorMessage& msg)
+dc::Graph::Graph()
 {
-	return _graphMessageQueue.push(msg);
+	_inputModule._id = _nextModuleId++;
+	_outputModule._id = _nextModuleId++;
+	updateGraphProcessContext();
 }
 
-void dc::GraphProcessor::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer)
+void dc::Graph::process(ModuleProcessContext& context)
 {
-	handleMessages();
-	handleGraphMessages();
-
-	_input->handleMessages();
-	_output->handleMessages();
-	for (auto p : _processors)
-	{
-		p->handleMessages();
-
-        if (p->alwaysProcess())
-        {
-			processModule(p);
-        }
-	}
-
-	_input->_audioBuffer.copyFrom(audioBuffer, false);
-	_input->_controlBuffer.clear();
-	_input->_controlBuffer.merge(controlBuffer);
-
-	_output->_audioBuffer.zero();
-	_output->_controlBuffer.clear();
-
-	processModule(_output);
-
-	audioBuffer.copyFrom(_output->_audioBuffer, false);
-	controlBuffer.clear();
-	controlBuffer.merge(_output->_controlBuffer);
-
-    // let the parent know they can clear out removed modules
-	_parent.setReadyToReleaseModules();
+	process(context.audioBuffer, context.controlBuffer, context.eventBuffer);
 }
 
-void dc::GraphProcessor::processModule(ModuleProcessor* proc)
+void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& events) const
 {
-	if (proc->_rev == _rev)
+	// get the context
+	auto context = std::atomic_load(&_graphProcessContext);
+
+	// this could be valid, so handle it
+	if (nullptr == context || context->modules.empty())
 	{
 		return;
 	}
-	proc->_rev = _rev;
+
+	// copy input to input module
+	if (auto* input = context->modules[0].module)
+	{
+		auto mCtx = std::atomic_load(&input->_processContext);
+		mCtx->audioBuffer.copyFrom(audio, false);
+		mCtx->controlBuffer.copyFrom(control, false);
+		mCtx->eventBuffer.clear();
+		mCtx->eventBuffer.merge(events);
+	}
+	else
+	{
+		assert(false);
+		return;
+	}
+
+	// process the modules
+	for (auto& m : context->modules)
+	{
+		processModule(m);
+	}
+
+	// copy output from output module
+	if (auto* output = context->modules[context->modules.size() - 1].module)
+	{
+		auto mCtx = std::atomic_load(&output->_processContext);
+		audio.copyFrom(mCtx->audioBuffer, false);
+		control.copyFrom(mCtx->controlBuffer, false);
+		events.clear();
+		events.merge(mCtx->eventBuffer);
+	}
+	else
+	{
+		assert(false);
+	}
+}
+
+void dc::Graph::processModule(ModuleRenderInfo& m)
+{
+	assert(nullptr != m.module);
+
+	auto ctx = std::atomic_load(&m.module->_processContext);
+
+    if (nullptr == ctx)
+    {
+		return;
+    }
+
+	// if this module has inputs, pull in the input data
+    if (ctx->numAudioIn > 0 || ctx->numControlIn > 0 || ctx->numEventIn > 0)
+	{
+		ctx->audioBuffer.zero();
+		ctx->controlBuffer.zero();
+		ctx->eventBuffer.clear();
+
+		for (auto inputInfo : m.inputs)
+		{
+			auto inCtx = std::atomic_load(&inputInfo.module->_processContext);
+
+            if (nullptr == inCtx)
+            {
+                continue;
+            }
+
+			switch (inputInfo.type)
+			{
+			case Connection::Type::Audio:
+				ctx->audioBuffer.addFrom(inCtx->audioBuffer, inputInfo.fromIdx, inputInfo.toIdx);
+				break;
+			case Connection::Type::Control:
+				ctx->controlBuffer.addFrom(inCtx->controlBuffer, inputInfo.fromIdx, inputInfo.toIdx);
+				break;
+			case Connection::Type::Event:
+				ctx->eventBuffer.merge(inCtx->eventBuffer, inputInfo.fromIdx, inputInfo.toIdx);
+				break;
+			default:;
+			}
+		}
+	}
+
+	m.module->process(*ctx);
+}
+
+void dc::Graph::updateGraphProcessContext()
+{
+	auto newContext = std::make_shared<GraphProcessContext>();
+
+	// build the context
+	newContext->modules.push_back(makeModuleRenderInfo(_inputModule));
+	for (auto& m : _modules)
+	{
+		size_t insertIdx = 0;
+		for (; insertIdx < newContext->modules.size(); ++insertIdx)
+		{
+			if (moduleIsInputTo(m.get(), newContext->modules[insertIdx].module))
+			{
+				break;
+			}
+		}
+		auto renderInfo = makeModuleRenderInfo(*m);
+		newContext->modules.insert(newContext->modules.begin() + insertIdx, renderInfo);
+	}
+	newContext->modules.push_back(makeModuleRenderInfo(_outputModule));
+
+	// swap in the new context
+	newContext = std::atomic_exchange(&_graphProcessContext, newContext);
+	// spin here in case process() is still using the old context
+	while (newContext.use_count() > 1) {}
+
+	// now that the old context is gone, we can clear the released modules
+	_modulesToRelease.clear();
+}
+
+dc::Graph::ModuleRenderInfo dc::Graph::makeModuleRenderInfo(Module& m)
+{
+	ModuleRenderInfo info;
+	info.module = &m;
 
 	std::vector<Connection> connections;
-	if (getInputConnectionsForModule(proc, connections))
+	if (getInputConnectionsForModule(m, connections))
 	{
-		// process upstream modules
 		for (auto& c : connections)
 		{
 			if (auto* upstream = getModuleById(c.fromId))
 			{
-				processModule(upstream);
-			}
-		}
-
-		// pull in control and audio
-		proc->_audioBuffer.zero();
-		proc->_controlBuffer.clear();
-
-		for (auto& c : connections)
-		{
-			if (auto* upstream = getModuleById(c.fromId))
-			{
-				switch (c.type)
-				{
-				case Connection::Audio:
-				{
-					if (c.fromIdx < upstream->_audioBuffer.getNumChannels())
-					{
-						proc->_audioBuffer.addFrom(upstream->_audioBuffer, c.fromIdx, c.toIdx);
-					}
-					break;
-				}
-				case Connection::Control:
-				{
-					if (c.fromIdx < upstream->_controlBuffer.getNumChannels())
-					{
-						proc->_controlBuffer.merge(upstream->_controlBuffer, c.fromIdx, c.toIdx);
-					}
-					break;
-				}
-				default:
-					break;
-				}
+				info.inputs.push_back({ upstream, c.type, c.fromIdx, c.toIdx });
 			}
 		}
 	}
 
-	proc->process();
+	return info;
 }
-
-dc::ModuleProcessor* dc::GraphProcessor::getModuleById(size_t id)
-{
-	if (_input->_id == id)
-	{
-		return _input;
-	}
-
-	if (_output->_id == id)
-	{
-		return _output;
-	}
-
-	for (auto proc : _processors)
-	{
-		if (proc->_id == id)
-		{
-			return proc;
-		}
-	}
-
-	return nullptr;
-}
-
-bool dc::GraphProcessor::getInputConnectionsForModule(ModuleProcessor* proc, std::vector<Connection>& connections)
-{
-	for (auto& c : _connections)
-	{
-		if (c.toId == proc->_id)
-		{
-			connections.push_back(c);
-		}
-	}
-	return !connections.empty();
-}
-
-void dc::GraphProcessor::handleGraphMessages()
-{
-	GraphProcessorMessage msg{};
-	while (_graphMessageQueue.pop(msg))
-	{
-		switch (msg.type)
-		{
-		case GraphProcessorMessage::InputModule:
-			_input = msg.moduleParam;
-			break;
-		case GraphProcessorMessage::OutputModule:
-			_output = msg.moduleParam;
-			break;
-		case GraphProcessorMessage::AddModule: 
-			_processors.push_back(msg.moduleParam);
-			break;
-		case GraphProcessorMessage::RemoveModule:
-            for (auto it = _processors.begin(); it != _processors.end(); ++it)
-            {
-                if (*it == msg.moduleParam)
-                {
-					_processors.erase(it);
-					break;
-                }
-            }
-			break;
-		case GraphProcessorMessage::AddConnection: 
-			_connections.emplace_back(msg.connectionParam);
-			break;
-		case GraphProcessorMessage::RemoveConnection:
-            for (auto it = _connections.begin(); it != _connections.end(); ++it)
-            {
-                if (*it == msg.connectionParam)
-                {
-					_connections.erase(it);
-					break;
-                }
-            }
-			break;
-		default: ;
-		}
-	}
-}
-
-dc::Graph::Graph() :
-	Module(std::make_unique<GraphProcessor>(*this)),
-	_graphProcessor(dynamic_cast<GraphProcessor*>(_processor.get()))
-{
-	GraphProcessorMessage msg{};
-	{
-		msg.type = GraphProcessorMessage::InputModule;
-		msg.moduleParam = _input._processor.get();
-		_graphProcessor->pushGraphMessage(msg);
-
-		_input.setId(_nextModuleId++);
-	}
-	{
-		msg.type = GraphProcessorMessage::OutputModule;
-		msg.moduleParam = _output._processor.get();
-		_graphProcessor->pushGraphMessage(msg);
-
-		_output.setId(_nextModuleId++);
-	}
-}
-
-void dc::Graph::process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) const
-{
-	_graphProcessor->incRev();
-	_graphProcessor->process(audioBuffer, controlBuffer);
-}
-
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 {
 	if (nullptr == module)
@@ -222,14 +176,11 @@ size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 	module->setSampleRate(_sampleRate);
 
 	const size_t id = _nextModuleId++;
-	module->setId(id);
+	module->_id = id;
 	
 	_modules.push_back(std::move(module));
 
-	GraphProcessorMessage msg{};
-	msg.type = GraphProcessorMessage::AddModule;
-	msg.moduleParam = _modules[_modules.size() - 1]->_processor.get();
-	_graphProcessor->pushGraphMessage(msg);
+	updateGraphProcessContext();
 
 	return id;
 }
@@ -245,14 +196,14 @@ dc::Module* dc::Graph::getModuleAt(size_t index)
 
 dc::Module* dc::Graph::getModuleById(size_t id)
 {
-	if (id == _input.getId())
+	if (id == _inputModule.getId())
 	{
-		return &_input;
+		return &_inputModule;
 	}
 
-	if (id == _output.getId())
+	if (id == _outputModule.getId())
 	{
-		return &_output;
+		return &_outputModule;
 	}
 
 	for (auto& m : _modules)
@@ -289,12 +240,9 @@ bool dc::Graph::addConnection(const Connection& connection)
 		return false;
 	}
 
-	GraphProcessorMessage msg{};
-	msg.type = GraphProcessorMessage::AddConnection;
-	msg.connectionParam = connection;
-	_graphProcessor->pushGraphMessage(msg);
-
 	_allConnections.push_back(connection);
+
+	updateGraphProcessContext();
 
 	return true;
 }
@@ -310,12 +258,10 @@ void dc::Graph::removeConnection(const Connection& connection)
 	{
 		if (_allConnections[i] == connection)
 		{
-			GraphProcessorMessage msg{};
-			msg.type = GraphProcessorMessage::RemoveConnection;
-			msg.connectionParam = connection;
-			_graphProcessor->pushGraphMessage(msg);
-
 			_allConnections.erase(_allConnections.begin() + i);
+
+			updateGraphProcessContext();
+
 			break;
 		}
 	}
@@ -353,15 +299,15 @@ void dc::Graph::disconnectModule(size_t id)
 
 void dc::Graph::blockSizeChanged()
 {
-	_input.setBlockSize(_blockSize);
-	_output.setBlockSize(_blockSize);
+	_inputModule.setBlockSize(_blockSize);
+	_outputModule.setBlockSize(_blockSize);
 	for (auto& m : _modules)
 	{
 		m->setBlockSize(_blockSize);
 	}
 }
 
-bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, ControlMessage::Type controlType)
+bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType)
 {
 	if (!Module::addIoInternal(io, description, controlType))
 	{
@@ -370,19 +316,27 @@ bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& descriptio
 
 	if (&io == &_audioInputs)
 	{
-		return _input.addIo(Audio | Output, description, controlType);
+		return _inputModule.addIo(Audio | Output, description, controlType);
 	}
 	if (&io == &_audioOutputs)
 	{
-		return _output.addIo(Audio | Input, description, controlType);
+		return _outputModule.addIo(Audio | Input, description, controlType);
 	}
 	if (&io == &_controlInputs)
 	{
-		return _input.addIo(Control | Output, description, controlType);
+		return _inputModule.addIo(Control | Output, description, controlType);
 	}
 	if (&io == &_controlOutputs)
 	{
-		return _output.addIo(Control | Input, description, controlType);
+		return _outputModule.addIo(Control | Input, description, controlType);
+	}
+	if (&io == &_eventInputs)
+	{
+		return _inputModule.addIo(Event | Output, description, controlType);
+	}
+	if (&io == &_eventOutputs)
+	{
+		return _outputModule.addIo(Event | Input, description, controlType);
 	}
 
 	return false;
@@ -397,19 +351,27 @@ bool dc::Graph::removeIoInternal(std::vector<Io>& io, size_t index)
 
 	if (&io == &_audioInputs)
 	{
-		return _input.removeIo(Audio | Output, index);
+		return _inputModule.removeIo(Audio | Output, index);
 	}
 	if (&io == &_audioOutputs)
 	{
-		return _output.removeIo(Audio | Input, index);
+		return _outputModule.removeIo(Audio | Input, index);
 	}
 	if (&io == &_controlInputs)
 	{
-		return _input.removeIo(Control | Output, index);
+		return _inputModule.removeIo(Control | Output, index);
 	}
 	if (&io == &_controlOutputs)
 	{
-		return _output.removeIo(Control | Input, index);
+		return _outputModule.removeIo(Control | Input, index);
+	}
+	if (&io == &_eventInputs)
+	{
+		return _inputModule.removeIo(Event | Output, index);
+	}
+	if (&io == &_eventOutputs)
+	{
+		return _outputModule.removeIo(Event | Input, index);
 	}
 
 	return false;
@@ -432,7 +394,7 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 
 	switch (connection.type)
 	{
-	case Connection::Audio: 
+	case Connection::Type::Audio: 
 	{
 		if (connection.fromIdx >= from->getNumIo(Audio | Output) || connection.toIdx >= to->getNumIo(Audio | Input))
 		{
@@ -440,10 +402,18 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 		}
 		break;
 	}
-	case Connection::Control: 
+	case Connection::Type::Control: 
 	{
-		const auto fromFlags = from->getControlIoFlags(connection.fromIdx, false);
-		const auto toFlags = to->getControlIoFlags(connection.toIdx, true);
+		if (connection.fromIdx >= from->getNumIo(Control | Output) || connection.toIdx >= to->getNumIo(Control | Input))
+		{
+			return false;
+		}
+		break;
+	}
+	case Connection::Type::Event: 
+	{
+		const auto fromFlags = from->getEventIoFlags(connection.fromIdx, false);
+		const auto toFlags = to->getEventIoFlags(connection.toIdx, true);
 		if ((fromFlags & toFlags) == 0)
 		{
 			return false;
@@ -533,9 +503,6 @@ bool dc::Graph::getInputConnectionsForModule(Module& m, std::vector<Connection>&
 
 bool dc::Graph::removeModuleInternal(size_t index)
 {
-    // release any old removed modules
-	releaseRemovedModules();
-
     if (index >= _modules.size())
     {
 		return false;
@@ -544,25 +511,12 @@ bool dc::Graph::removeModuleInternal(size_t index)
     // disconnect the module
 	disconnectModule(_modules[index]->_id);
 
-	// let the processor know this one went away
-	GraphProcessorMessage msg{};
-	msg.type = GraphProcessorMessage::RemoveModule;
-	msg.moduleParam = _modules[index]->_processor.get();
-	_graphProcessor->pushGraphMessage(msg);
-
     // stick the module into the release pool
-	_moduleReleasePool.emplace_back(_modules[index].release());
+	_modulesToRelease.emplace_back(_modules[index].release());
 	_modules.erase(_modules.begin() + index);
-	_readyToRelease.clear();
+
+    // update the process context
+	updateGraphProcessContext();
 
 	return true;
-}
-
-void dc::Graph::releaseRemovedModules()
-{
-    if (_readyToRelease.test_and_set())
-    {
-		_moduleReleasePool.clear();
-		_readyToRelease.clear();
-    }
 }

@@ -6,37 +6,28 @@
 #pragma once
 
 #include "Module.h"
+#include "MessageQueue.h"
 
 namespace dc
 {
 class LevelMeter : public Module
 {
 public:
+	LevelMeter();
+
+	float getLevel(size_t channel);
+
+protected:
 	struct LevelMessage
 	{
 		size_t index;
 		float level;
 	};
 
-	class LevelMeterProcessor : public ModuleProcessor
-	{
-	public:
-		LevelMeterProcessor(LevelMeter& parent);
-
-	protected:
-		void process(AudioBuffer& audioBuffer, ControlBuffer& controlBuffer) override;
-
-		LevelMeter& _parent;
-	};
-
-	LevelMeter();
-
-	float getLevel(size_t channel);
+    void process(ModuleProcessContext& context) override;
 
 	bool wantsMessage() const { return _levelMessageQueue.empty(); }
 	bool pushLevelMessage(const LevelMessage& msg);
-
-protected:
 	void handleLevelMessages();
 
 	MessageQueue<LevelMessage> _levelMessageQueue;
