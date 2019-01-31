@@ -41,6 +41,11 @@ struct EventMessage final
 	};
 };
 
+constexpr EventMessage::Type operator|(const EventMessage::Type lhs, const EventMessage::Type rhs)
+{
+	return static_cast<EventMessage::Type>(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+}
+
 class EventBuffer final
 {
 public:
