@@ -131,25 +131,29 @@ TEST(AudioBuffer, AddFunctional)
 {
 	const size_t numSamples = 512;
 	const size_t numChannels = 4;
+	const float startValue = 0.2f;
+	const float addValue = 0.55f;
+	const float expectedValue = startValue + addValue;
 
 	AudioBuffer b1(numSamples, numChannels);
+	b1.fill(startValue);
 	AudioBuffer b2(numSamples, numChannels);
-	b2.fill(1.0f);
-
-	EXPECT_FALSE(buffersEqual(b1, b2));
+	b2.fill(addValue);
+	AudioBuffer bE(numSamples, numChannels);
+	bE.fill(expectedValue);
 
 	b1.addFrom(b2);
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	ASSERT_TRUE(buffersEqual(b1, bE));
 
-	b1.zero();
+	b1.fill(startValue);
 
 	for (size_t cIdx = 0; cIdx < b1.getNumChannels(); ++cIdx)
 	{
 		b1.addFrom(b2, cIdx, cIdx);
 	}
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	ASSERT_TRUE(buffersEqual(b1, bE));
 }
 
 TEST(AudioBuffer, ApplyGainFunctional)

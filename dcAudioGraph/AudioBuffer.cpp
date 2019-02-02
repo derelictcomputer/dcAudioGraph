@@ -132,7 +132,7 @@ void dc::AudioBuffer::addFrom(const AudioBuffer& other, size_t fromChannel, size
 		float* toPtr = _data + toChannel * _numSamples;
 		for (size_t sIdx = 0; sIdx < numSamplesToAdd; ++sIdx)
 		{
-			toPtr[sIdx] = fromPtr[sIdx];
+			toPtr[sIdx] += fromPtr[sIdx];
 		}
 	}
 }
