@@ -2,15 +2,17 @@
 #include <utility>
 #include "ModuleParam.h"
 
-dc::ParamRange::ParamRange(float min, float max, float stepSize) :
+dc::ParamRange::ParamRange(float min, float max, float stepSize, float sliderSkew) :
 	_min(min),
-	_max(max)
+	_max(max),
+	_sliderSkew(sliderSkew)
 {
 	_stepSize = std::max(0.0f, stepSize);
 }
 
-dc::ParamRange::ParamRange(float min, float max, float stepSize, GetNormFn getNormalized, GetRawFn getRaw) :
-	ParamRange(min, max, stepSize)
+dc::ParamRange::ParamRange(float min, float max, float stepSize, 
+	GetNormFn getNormalized, GetRawFn getRaw, float sliderSkew) :
+	ParamRange(min, max, stepSize, sliderSkew)
 {
 	if (nullptr != getNormalized)
 	{
@@ -29,6 +31,7 @@ dc::ParamRange& dc::ParamRange::operator=(const ParamRange& other)
 		_min = other._min;
 		_max = other._max;
 		_stepSize = other._stepSize;
+		_sliderSkew = other._sliderSkew;
 		_getNormalized = other._getNormalized;
 		_getRaw = other._getRaw;
 	}
@@ -156,6 +159,9 @@ void dc::ModuleParam::updateSmoothing(size_t numSamples)
 	_normStart = _normEnd;
 	_normEnd = getNormalized();
 	_normInc = (_normEnd - _normStart) / numSamples;
+	_scaleStart = _scaleEnd;
+	_scaleEnd = _controlScale;
+	_scaleInc = (_scaleEnd - _scaleStart) / numSamples;
 }
 
 float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
@@ -166,6 +172,7 @@ float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
 float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset, float controlSample) const
 {
 	const float smoothed = _normStart + _normInc * sampleOffset;
-    const float ctlRange = _controlScale < 0.0f ? smoothed : 1.0f - smoothed;
-	return _range.getRaw(smoothed + controlSample * _controlScale * ctlRange);
+	const float scaleSmoothed = _scaleStart + _scaleInc * sampleOffset;
+    const float ctlRange = scaleSmoothed < 0.0f ? smoothed : 1.0f - smoothed;
+	return _range.getRaw(smoothed + controlSample * scaleSmoothed * ctlRange);
 }

@@ -15,5 +15,10 @@ public:
 
 private:
     void process(ModuleProcessContext& context) override;
+
+	static float getNormalized(float rawValue, float min, float max);
+	static float getRaw(float normalizedValue, float min, float max);
+
+	static float dbToLin(float db);
 };
 }

@@ -16,8 +16,8 @@ public:
 	using GetRawFn = float(*)(float, float, float);
 
 	ParamRange() = default;
-	ParamRange(float min, float max, float stepSize);
-	ParamRange(float min, float max, float stepSize, GetNormFn getNormalized, GetRawFn getRaw);
+	ParamRange(float min, float max, float stepSize, float sliderSkew = 1.0f);
+	ParamRange(float min, float max, float stepSize, GetNormFn getNormalized, GetRawFn getRaw, float sliderSkew = 1.0f);
 
 	~ParamRange() = default;
 
@@ -34,6 +34,7 @@ public:
 	float getMin() const { return _min; }
 	float getMax() const { return _max; }
 	float getStepSize() const { return _stepSize; }
+	float getSliderSkew() const { return _sliderSkew; }
 
 	// helpers
 	static float clampToRange(float value, float min, float max);
@@ -47,6 +48,7 @@ private:
 	float _min = 0.0f;
 	float _max = 1.0f;
 	float _stepSize = 0.0f;
+	float _sliderSkew = 1.0f;
 	GetNormFn _getNormalized = getNormalizedLinear;
 	GetRawFn _getRaw = getRawLinear;
 };
@@ -98,5 +100,8 @@ private:
 	float _normStart = 0.0f;
 	float _normEnd = 0.0f;
 	float _normInc = 0.0f;
+	float _scaleStart = 0.0f;
+	float _scaleEnd = 0.0f;
+	float _scaleInc = 0.0f;
 };
 }

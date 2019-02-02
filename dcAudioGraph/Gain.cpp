@@ -3,7 +3,7 @@
 dc::Gain::Gain()
 {
 	setNumIo(Audio | Input | Output, 1);
-	addParam("gain", "Gain", ParamRange(0.0f, 1.0f, 0.0f), true, true, 1.0f);
+	addParam("gain", "Gain", ParamRange(-70.0f, 0.0f, 0.0f, getNormalized, getRaw, 2.0f), true, true, 1.0f);
 }
 
 void dc::Gain::process(ModuleProcessContext& context)
@@ -20,7 +20,25 @@ void dc::Gain::process(ModuleProcessContext& context)
 		auto* audPtr = context.audioBuffer.getChannelPointer(cIdx);
         for (size_t sIdx = 0; sIdx < nSamples; ++sIdx)
         {
-			audPtr[sIdx] *= context.params[0]->getSmoothedRaw(sIdx, ctlPtr[sIdx]);
+			const float gainDb = context.params[0]->getSmoothedRaw(sIdx, ctlPtr[sIdx]);
+			audPtr[sIdx] *= dbToLin(gainDb);
         }
     }
+}
+
+float dc::Gain::getNormalized(float rawValue, float min, float max)
+{
+    const float pct = (rawValue - min) / (max - min);
+	return std::powf(pct, 2.0f);
+}
+
+float dc::Gain::getRaw(float normalizedValue, float min, float max)
+{
+	normalizedValue = std::expf(std::log(normalizedValue) / 2.0f);
+	return min + (max - min) * normalizedValue;
+}
+
+float dc::Gain::dbToLin(float db)
+{
+	return std::powf(10.0f, db / 20.0f);
 }
