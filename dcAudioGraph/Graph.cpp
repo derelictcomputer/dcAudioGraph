@@ -13,8 +13,8 @@ bool dc::Connection::operator==(const Connection& other) const
 
 dc::Graph::Graph()
 {
-	_inputModule._id = _nextModuleId++;
-	_outputModule._id = _nextModuleId++;
+	_inputModule._id = 1;
+	_outputModule._id = 2;
 	updateGraphProcessContext();
 }
 
@@ -165,6 +165,16 @@ dc::Graph::ModuleRenderInfo dc::Graph::makeModuleRenderInfo(Module& m)
 
 	return info;
 }
+
+void dc::Graph::clear()
+{
+    while (!_modules.empty())
+    {
+		removeModuleAt(0);
+    }
+	_nextModuleId = 3;
+}
+
 size_t dc::Graph::addModule(std::unique_ptr<Module> module)
 {
 	if (nullptr == module)
