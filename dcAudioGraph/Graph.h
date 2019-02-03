@@ -40,6 +40,8 @@ public:
 	Module* getInputModule() { return &_inputModule; }
 	Module* getOutputModule() { return &_outputModule; }
 
+	void clear();
+
 	size_t addModule(std::unique_ptr<Module> module);
 	size_t getNumModules() const { return _modules.size(); }
 	Module* getModuleAt(size_t index);
@@ -107,6 +109,6 @@ private:
 	std::shared_ptr<GraphProcessContext> _graphProcessContext;
 	std::vector<std::unique_ptr<Module>> _modulesToRelease;
 
-	size_t _nextModuleId = 1;
+	size_t _nextModuleId = 3; // reserve 0 for invalid, 1 and 2 for in and out
 };
 }
