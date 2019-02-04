@@ -42,7 +42,7 @@ public:
 
 	void clear();
 
-	size_t addModule(std::unique_ptr<Module> module);
+	size_t addModule(std::unique_ptr<Module> module, size_t graphId = 0);
 	size_t getNumModules() const { return _modules.size(); }
 	Module* getModuleAt(size_t index);
 	Module* getModuleById(size_t id);

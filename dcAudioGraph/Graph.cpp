@@ -175,19 +175,36 @@ void dc::Graph::clear()
 	_nextModuleId = 3;
 }
 
-size_t dc::Graph::addModule(std::unique_ptr<Module> module)
+size_t dc::Graph::addModule(std::unique_ptr<Module> module, size_t graphId)
 {
 	if (nullptr == module)
 	{
 		return 0;
 	}
 
+	size_t id = 0;
+    if (graphId > 0)
+    {
+        if (auto* m = getModuleById(graphId))
+        {
+			return false;
+        }
+		id = graphId;
+        if (id >= _nextModuleId)
+        {
+			_nextModuleId = id + 1;
+        }
+    }
+    else
+    {
+		id = _nextModuleId++;
+    }
+
+	module->_id = id;
+
 	module->setBlockSize(_blockSize);
 	module->setSampleRate(_sampleRate);
 
-	const size_t id = _nextModuleId++;
-	module->_id = id;
-	
 	_modules.push_back(std::move(module));
 
 	updateGraphProcessContext();
