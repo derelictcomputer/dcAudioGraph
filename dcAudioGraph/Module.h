@@ -102,11 +102,7 @@ protected:
 
     virtual void sampleRateChanged() {}
 	virtual void blockSizeChanged() {}
-
-	// I/O
-	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
-	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType);
-	virtual bool removeIoInternal(std::vector<Io>& io, size_t index);
+    virtual void ioCountChanged(IoType type, size_t count) {}
 
 	// Params
 	bool addParam(const std::string& id, const std::string& displayName,
@@ -115,7 +111,12 @@ protected:
 	bool removeParam(size_t index);
 
 private:
-	void updateProcessContext();
+	// I/O
+	virtual bool setNumIoInternal(std::vector<Io>& io, size_t n);
+	virtual bool addIoInternal(std::vector<Io>& io, const std::string& description, EventMessage::Type controlType);
+	virtual bool removeIoInternal(std::vector<Io>& io, size_t index);
+
+    void updateProcessContext();
 
 	Io* getIo(IoType typeFlags, size_t index);
 

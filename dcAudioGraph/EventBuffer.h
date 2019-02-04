@@ -18,6 +18,7 @@ struct EventMessage final
 	{
 		Trigger = 0x0001,
 		Note	= 0x0002,
+        Float   = 0x0004,
 		None	= 0x0000,
 		All		= 0xffff
 	};
@@ -27,6 +28,12 @@ struct EventMessage final
 		int noteNumber = 0;
 		float gain = 1.0f;
 	};
+
+    struct FloatParams
+    {
+		int id = 0;
+		float value = 0.0f;
+    };
 
 	EventMessage();
 	explicit EventMessage(Type type, size_t sampleOffset);
@@ -38,6 +45,7 @@ struct EventMessage final
 	{
 		uint8_t noParam;
 		NoteParams noteParam;
+		FloatParams floatParam;
 	};
 };
 
@@ -45,6 +53,17 @@ constexpr EventMessage::Type operator|(const EventMessage::Type lhs, const Event
 {
 	return static_cast<EventMessage::Type>(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
 }
+
+constexpr EventMessage::Type operator&(const EventMessage::Type lhs, const EventMessage::Type rhs)
+{
+	return static_cast<EventMessage::Type>(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs));
+}
+
+constexpr bool eventMessageTypeMatches(const EventMessage::Type lhs, const EventMessage::Type rhs)
+{
+	return (lhs & rhs) == rhs;
+}
+
 
 class EventBuffer final
 {

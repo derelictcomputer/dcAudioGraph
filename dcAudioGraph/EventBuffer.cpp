@@ -14,6 +14,10 @@ dc::EventMessage::EventMessage(Type type, size_t sampleOffset) : sampleOffset(sa
 		this->type = type;
 		noteParam = { 0, 1.0f };
 		break;
+	case Type::Float:
+		this->type = type;
+		floatParam = { 0, 0.0f };
+        break;
 	case Type::Trigger:
 	default:
 		this->type = Type::Trigger;

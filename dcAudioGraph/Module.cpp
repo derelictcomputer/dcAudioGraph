@@ -130,6 +130,7 @@ bool dc::Module::setNumIo(IoType typeFlags, size_t n)
 	if (success)
 	{
 		updateProcessContext();
+		ioCountChanged(typeFlags, n);
 	}
 
 	return success;
@@ -176,6 +177,7 @@ bool dc::Module::addIo(IoType typeFlags, const std::string& description, EventMe
 	if (success)
 	{
 		updateProcessContext();
+		ioCountChanged(typeFlags, getNumIo(typeFlags));
 	}
 
 	return success;
@@ -222,6 +224,7 @@ bool dc::Module::removeIo(IoType typeFlags, size_t index)
     if (success)
     {
 		updateProcessContext();
+		ioCountChanged(typeFlags, getNumIo(typeFlags));
     }
 
 	return success;
