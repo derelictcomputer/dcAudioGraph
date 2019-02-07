@@ -38,9 +38,14 @@ void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& e
 	if (auto* input = context->modules[0].module)
 	{
 		auto mCtx = std::atomic_load(&input->_processContext);
+
+        // clear in case there are different numbers of channels
+        mCtx->audioBuffer.zero();
+        mCtx->controlBuffer.zero();
+		mCtx->eventBuffer.clear();
+
 		mCtx->audioBuffer.copyFrom(audio, false);
 		mCtx->controlBuffer.copyFrom(control, false);
-		mCtx->eventBuffer.clear();
 		mCtx->eventBuffer.merge(events);
 	}
 	else
@@ -59,9 +64,14 @@ void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& e
 	if (auto* output = context->modules[context->modules.size() - 1].module)
 	{
 		auto mCtx = std::atomic_load(&output->_processContext);
-		audio.copyFrom(mCtx->audioBuffer, false);
+
+        // clear in case there are different numbers of channels
+        audio.zero();
+        control.zero();
+	    events.clear();
+
+	    audio.copyFrom(mCtx->audioBuffer, false);
 		control.copyFrom(mCtx->controlBuffer, false);
-		events.clear();
 		events.merge(mCtx->eventBuffer);
 	}
 	else
