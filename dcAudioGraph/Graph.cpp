@@ -20,10 +20,10 @@ dc::Graph::Graph()
 
 void dc::Graph::process(ModuleProcessContext& context)
 {
-	process(context.audioBuffer, context.controlBuffer, context.eventBuffer);
+	process(context.audioBuffer, context.eventBuffer);
 }
 
-void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& events) const
+void dc::Graph::process(AudioBuffer& audio, EventBuffer& events) const
 {
 	// get the context
 	auto context = std::atomic_load(&_graphProcessContext);
@@ -41,11 +41,9 @@ void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& e
 
         // clear in case there are different numbers of channels
         mCtx->audioBuffer.zero();
-        mCtx->controlBuffer.zero();
 		mCtx->eventBuffer.clear();
 
 		mCtx->audioBuffer.copyFrom(audio, false);
-		mCtx->controlBuffer.copyFrom(control, false);
 		mCtx->eventBuffer.merge(events);
 	}
 	else
@@ -67,11 +65,9 @@ void dc::Graph::process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& e
 
         // clear in case there are different numbers of channels
         audio.zero();
-        control.zero();
 	    events.clear();
 
 	    audio.copyFrom(mCtx->audioBuffer, false);
-		control.copyFrom(mCtx->controlBuffer, false);
 		events.merge(mCtx->eventBuffer);
 	}
 	else
@@ -92,10 +88,9 @@ void dc::Graph::processModule(ModuleRenderInfo& m)
     }
 
 	// if this module has inputs, pull in the input data
-    if (ctx->numAudioIn > 0 || ctx->numControlIn > 0 || ctx->numEventIn > 0)
+    if (ctx->numAudioIn > 0 || ctx->numEventIn > 0)
 	{
 		ctx->audioBuffer.zero();
-		ctx->controlBuffer.zero();
 		ctx->eventBuffer.clear();
 
 		for (auto inputInfo : m.inputs)
@@ -111,9 +106,6 @@ void dc::Graph::processModule(ModuleRenderInfo& m)
 			{
 			case Connection::Type::Audio:
 				ctx->audioBuffer.addFrom(inCtx->audioBuffer, inputInfo.fromIdx, inputInfo.toIdx);
-				break;
-			case Connection::Type::Control:
-				ctx->controlBuffer.addFrom(inCtx->controlBuffer, inputInfo.fromIdx, inputInfo.toIdx);
 				break;
 			case Connection::Type::Event:
 				ctx->eventBuffer.merge(inCtx->eventBuffer, inputInfo.fromIdx, inputInfo.toIdx);
@@ -359,14 +351,6 @@ bool dc::Graph::addIoInternal(std::vector<Io>& io, const std::string& descriptio
 	{
 		return _outputModule.addIo(Audio | Input, description, controlType);
 	}
-	if (&io == &_controlInputs)
-	{
-		return _inputModule.addIo(Control | Output, description, controlType);
-	}
-	if (&io == &_controlOutputs)
-	{
-		return _outputModule.addIo(Control | Input, description, controlType);
-	}
 	if (&io == &_eventInputs)
 	{
 		return _inputModule.addIo(Event | Output, description, controlType);
@@ -393,14 +377,6 @@ bool dc::Graph::removeIoInternal(std::vector<Io>& io, size_t index)
 	if (&io == &_audioOutputs)
 	{
 		return _outputModule.removeIo(Audio | Input, index);
-	}
-	if (&io == &_controlInputs)
-	{
-		return _inputModule.removeIo(Control | Output, index);
-	}
-	if (&io == &_controlOutputs)
-	{
-		return _outputModule.removeIo(Control | Input, index);
 	}
 	if (&io == &_eventInputs)
 	{
@@ -434,14 +410,6 @@ bool dc::Graph::connectionIsValid(const Connection& connection)
 	case Connection::Type::Audio: 
 	{
 		if (connection.fromIdx >= from->getNumIo(Audio | Output) || connection.toIdx >= to->getNumIo(Audio | Input))
-		{
-			return false;
-		}
-		break;
-	}
-	case Connection::Type::Control: 
-	{
-		if (connection.fromIdx >= from->getNumIo(Control | Output) || connection.toIdx >= to->getNumIo(Control | Input))
 		{
 			return false;
 		}

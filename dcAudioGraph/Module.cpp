@@ -34,17 +34,6 @@ size_t dc::Module::getNumIo(IoType typeFlags) const
 			numIo += _audioOutputs.size();
 		}
 	}
-	if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			numIo += _controlInputs.size();
-		}
-		if (typeFlags & Output)
-		{
-			numIo += _controlOutputs.size();
-		}
-	}
     if (typeFlags & Event)
     {
         if (typeFlags & Input)
@@ -104,17 +93,6 @@ bool dc::Module::setNumIo(IoType typeFlags, size_t n)
 			success &= setNumIoInternal(_audioOutputs, n);
 		}
 	}
-	if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			success &= setNumIoInternal(_controlInputs, n);
-		}
-		if (typeFlags & Output)
-		{
-			success &= setNumIoInternal(_controlOutputs, n);
-		}
-	}	
     if (typeFlags & Event)
 	{
 		if (typeFlags & Input)
@@ -151,17 +129,6 @@ bool dc::Module::addIo(IoType typeFlags, const std::string& description, EventMe
 			success &= addIoInternal(_audioOutputs, description, controlType);
 		}
 	}
-	if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			success &= addIoInternal(_controlInputs, description, controlType);
-		}
-		if (typeFlags & Output)
-		{
-			success &= addIoInternal(_controlOutputs, description, controlType);
-		}
-	}
 	if (typeFlags & Event)
 	{
 		if (typeFlags & Input)
@@ -196,17 +163,6 @@ bool dc::Module::removeIo(IoType typeFlags, size_t index)
 		if (typeFlags & Output)
 		{
 			success &= removeIoInternal(_audioOutputs, index);
-		}
-	}
-	if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			success &= removeIoInternal(_controlInputs, index);
-		}
-		if (typeFlags & Output)
-		{
-			success &= removeIoInternal(_controlOutputs, index);
 		}
 	}
 	if (typeFlags & Event)
@@ -287,11 +243,11 @@ bool dc::Module::addParam(const std::string& id, const std::string& displayName,
 
 		if (hasControlInput)
 		{
-			if (!addIo(Control | Input, displayName))
+			if (!addIo(Event | Input, displayName, EventMessage::Type::Float))
 			{
 				return false;
 			}
-			inputIdx = static_cast<int>(_controlInputs.size()) - 1;
+			inputIdx = static_cast<int>(_eventInputs.size()) - 1;
 		}
 
 		_params.emplace_back(std::make_unique<ModuleParam>(id, displayName, range, serializable, inputIdx, initialValue));
@@ -325,14 +281,11 @@ void dc::Module::updateProcessContext()
 
 	newContext->numAudioIn = _audioInputs.size();
 	newContext->numAudioOut = _audioOutputs.size();
-	newContext->numControlIn = _controlInputs.size();
-	newContext->numControlOut = _controlOutputs.size();
 	newContext->numEventIn = _eventInputs.size();
 	newContext->numEventOut = _eventOutputs.size();
 	newContext->blockSize = _blockSize;
 	newContext->sampleRate = _sampleRate;
 	newContext->audioBuffer.resize(_blockSize, std::max(_audioInputs.size(), _audioOutputs.size()));
-	newContext->controlBuffer.resize(_blockSize, std::max(_controlInputs.size(), _controlOutputs.size()));
 	newContext->eventBuffer.setNumChannels(std::max(_eventInputs.size(), _eventOutputs.size()));
     for (auto& p : _params)
     {
@@ -364,23 +317,6 @@ dc::Module::Io* dc::Module::getIo(IoType typeFlags, size_t index)
 			if (index < _audioOutputs.size())
 			{
 				return &_audioOutputs[index];
-			}
-		}
-	}
-	else if (typeFlags & Control)
-	{
-		if (typeFlags & Input)
-		{
-			if (index < _controlInputs.size())
-			{
-				return &_controlInputs[index];
-			}
-		}
-		else if (typeFlags & Output)
-		{
-			if (index < _controlOutputs.size())
-			{
-				return &_controlOutputs[index];
 			}
 		}
 	}

@@ -20,5 +20,7 @@ private:
 	static float getRaw(float normalizedValue, float min, float max);
 
 	static float dbToLin(float db);
+
+    float _lastCtlInput = 0.0f;
 };
 }

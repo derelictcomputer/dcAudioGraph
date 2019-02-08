@@ -10,17 +10,25 @@ void dc::Gain::process(ModuleProcessContext& context)
 {
 	const size_t nChannels = context.audioBuffer.getNumChannels();
 	const size_t nSamples = context.audioBuffer.getNumSamples();
+    float ctlInput = _lastCtlInput;
+
+	{
+        auto it = context.eventBuffer.getIterator(0);
+        EventMessage msg;
+        while (it.next(msg))
+        {
+            ctlInput = msg.floatParam.value;
+        }
+	}
 
 	context.params[0]->updateSmoothing(nSamples);
-
-	auto* ctlPtr = context.controlBuffer.getChannelPointer(0);
 
     for (size_t cIdx = 0; cIdx < nChannels; ++cIdx)
     {
 		auto* audPtr = context.audioBuffer.getChannelPointer(cIdx);
         for (size_t sIdx = 0; sIdx < nSamples; ++sIdx)
         {
-			const float gainDb = context.params[0]->getSmoothedRaw(sIdx, ctlPtr[sIdx]);
+			const float gainDb = context.params[0]->getSmoothedRaw(sIdx, ctlInput);
 			audPtr[sIdx] *= dbToLin(gainDb);
         }
     }

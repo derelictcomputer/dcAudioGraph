@@ -16,7 +16,6 @@ struct Connection final
 	enum class Type
 	{
 		Audio,
-		Control,
         Event
 	};
 
@@ -35,7 +34,7 @@ class Graph final : public Module
 public:
 	Graph();
 
-	void process(AudioBuffer& audio, AudioBuffer& control, EventBuffer& events) const;
+	void process(AudioBuffer& audio, EventBuffer& events) const;
 
 	Module* getInputModule() { return &_inputModule; }
 	Module* getOutputModule() { return &_outputModule; }
