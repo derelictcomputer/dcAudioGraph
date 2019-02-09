@@ -147,11 +147,22 @@ void dc::ModuleParam::setControlScale(float scale)
 	_controlScale = std::max(-1.0f, std::min(1.0f, scale));
 }
 
+void dc::ModuleParam::setControlInput(float value)
+{
+    _controlInput = std::max(0.0f, std::min(1.0f, value));
+}
+
 void dc::ModuleParam::initSmoothing()
 {
 	_normStart = getNormalized();
 	_normEnd = _normStart;
 	_normInc = 0.0f;
+    _scaleStart = getControlScale();
+    _scaleEnd = _scaleStart;
+    _scaleInc = 0.0f;
+    _inputStart = getControlInput();
+    _inputEnd = _inputStart;
+    _inputInc = 0.0f;
 }
 
 void dc::ModuleParam::updateSmoothing(size_t numSamples)
@@ -162,17 +173,21 @@ void dc::ModuleParam::updateSmoothing(size_t numSamples)
 	_scaleStart = _scaleEnd;
 	_scaleEnd = _controlScale;
 	_scaleInc = (_scaleEnd - _scaleStart) / numSamples;
+    _inputStart = _inputEnd;
+    _inputEnd = _controlInput;
+    _inputInc = (_inputEnd - _inputStart) / numSamples;
+
 }
 
 float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
 {
+    if (hasControlInput())
+    {
+        const float smoothed = _normStart + _normInc * sampleOffset;
+        const float scaleSmoothed = _scaleStart + _scaleInc * sampleOffset;
+        const float inputSmoothed = _inputStart + _inputInc * sampleOffset;
+        const float ctlRange = scaleSmoothed < 0.0f ? smoothed : 1.0f - smoothed;
+        return _range.getRaw(smoothed + inputSmoothed * scaleSmoothed * ctlRange);
+    }
 	return _range.getRaw(_normStart + _normInc * sampleOffset);
-}
-
-float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset, float controlSample) const
-{
-	const float smoothed = _normStart + _normInc * sampleOffset;
-	const float scaleSmoothed = _scaleStart + _scaleInc * sampleOffset;
-    const float ctlRange = scaleSmoothed < 0.0f ? smoothed : 1.0f - smoothed;
-	return _range.getRaw(smoothed + controlSample * scaleSmoothed * ctlRange);
 }

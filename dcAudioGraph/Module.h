@@ -100,11 +100,16 @@ protected:
 	virtual void blockSizeChanged() {}
     virtual void ioCountChanged(IoType type, size_t count) {}
 
+    void setEventIoFilters(IoType type, size_t index, EventMessage::Type filters);
+
 	// Params
 	bool addParam(const std::string& id, const std::string& displayName,
 		const ParamRange& range,
 		bool serializable = false, bool hasControlInput = false, float initialValue = 0.0f);
 	bool removeParam(size_t index);
+
+    // for use in process() only
+    static void updateParams(ModuleProcessContext& context);
 
 private:
 	// I/O

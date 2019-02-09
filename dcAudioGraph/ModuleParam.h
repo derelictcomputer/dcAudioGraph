@@ -78,11 +78,13 @@ public:
 	float getControlScale() const { return _controlScale.load(); }
 	void setControlScale(float scale);
 
+    float getControlInput() const { return _controlInput; }
+    void setControlInput(float value);
+
     // for use by a Module's process() to get smoothed values with or without control combination
 	void initSmoothing();
 	void updateSmoothing(size_t numSamples);
 	float getSmoothedRaw(size_t sampleOffset) const;
-	float getSmoothedRaw(size_t sampleOffset, float controlSample) const;
 
 	const ParamRange& getRange() const { return _range; }
 
@@ -95,6 +97,7 @@ private:
 
 	std::atomic<float> _value{ 0.0f };
 	std::atomic<float> _controlScale{ 0.0f };
+    std::atomic<float> _controlInput{ 0.0f };
 
     // for smoothing
 	float _normStart = 0.0f;
@@ -103,5 +106,8 @@ private:
 	float _scaleStart = 0.0f;
 	float _scaleEnd = 0.0f;
 	float _scaleInc = 0.0f;
+    float _inputStart = 0.0f;
+    float _inputEnd = 0.0f;
+    float _inputInc = 0.0f;
 };
 }

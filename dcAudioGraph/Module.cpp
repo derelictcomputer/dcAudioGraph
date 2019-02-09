@@ -234,6 +234,24 @@ bool dc::Module::removeIoInternal(std::vector<Io>& io, size_t index)
 	return false;
 }
 
+void dc::Module::setEventIoFilters(IoType type, size_t index, EventMessage::Type filters)
+{
+    if (type & Input)
+    {
+        if (index < _eventInputs.size())
+        {
+            _eventInputs[index].eventTypeFlags = filters;
+        }
+    }
+    if (type & Output)
+    {
+        if (index < _eventOutputs.size())
+        {
+            _eventOutputs[index].eventTypeFlags = filters;
+        }
+    }
+}
+
 bool dc::Module::addParam(const std::string& id, const std::string& displayName, const ParamRange& range,
 	bool serializable, bool hasControlInput, float initialValue)
 {
@@ -273,6 +291,24 @@ bool dc::Module::removeParam(size_t index)
 		return true;
 	}
 	return false;
+}
+
+void dc::Module::updateParams(ModuleProcessContext& context)
+{
+    for (auto* param : context.params)
+    {
+        param->updateSmoothing(context.blockSize);
+
+        if (param->hasControlInput())
+        {
+            auto it = context.eventBuffer.getIterator(param->getControlInputIndex());
+            EventMessage msg;
+            while (it.next(msg))
+            {
+                param->setControlInput(msg.floatParam.value);
+            }
+        }
+    }
 }
 
 void dc::Module::updateProcessContext()

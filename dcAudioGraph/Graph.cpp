@@ -285,9 +285,42 @@ void dc::Graph::removeConnection(const Connection& connection)
 
 	for (size_t i = 0; i < _allConnections.size(); ++i)
 	{
+        // handle zeroing the control input if there is one
 		if (_allConnections[i] == connection)
 		{
 			_allConnections.erase(_allConnections.begin() + i);
+
+            if (connection.type == Connection::Type::Event)
+            {
+                if (auto* m = getModuleById(connection.toId))
+                {
+                    bool hasOtherConnection = false;
+                    std::vector<Connection> cs;
+                    if (getInputConnectionsForModule(*m, cs))
+                    {
+                        for (auto& c : cs)
+                        {
+                            if (c.toIdx == connection.toIdx)
+                            {
+                                hasOtherConnection = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!hasOtherConnection)
+                    {
+                        for (auto& p : m->_params)
+                        {
+                            if (p->getControlInputIndex() == static_cast<int>(connection.toIdx))
+                            {
+                                p->setControlInput(0.0f);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
 			updateGraphProcessContext();
 
