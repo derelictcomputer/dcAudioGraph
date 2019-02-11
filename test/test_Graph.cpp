@@ -56,14 +56,13 @@ TEST(Graph, PassthroughBasic)
 	outBuffer.copyFrom(inBuffer, true);
 	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
-	AudioBuffer controlBuffer;
 	EventBuffer eventBuffer;
 
 	Graph g;
 	makeBasicGraph(g, numIo);
 	g.setBlockSize(numSamples);
 	g.setSampleRate(44100);
-	g.process(outBuffer, controlBuffer, eventBuffer);
+	g.process(outBuffer, eventBuffer);
 	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 }
 
@@ -79,7 +78,6 @@ TEST(Graph, PassthroughBasicLoop)
 	outBuffer.copyFrom(inBuffer, true);
 	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 
-	AudioBuffer controlBuffer;
 	EventBuffer eventBuffer;
 
 	Graph g;
@@ -89,7 +87,7 @@ TEST(Graph, PassthroughBasicLoop)
 
 	for (int i = 0; i < 1000; ++i)
 	{
-		g.process(outBuffer, controlBuffer, eventBuffer);
+		g.process(outBuffer, eventBuffer);
 		ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
 	}
 }
@@ -114,8 +112,8 @@ TEST(Graph, SetNumIo)
 	Graph g;
 	ASSERT_EQ(g.getNumIo(Audio | Input), 0);
 	ASSERT_EQ(g.getNumIo(Audio | Output), 0);
-	ASSERT_EQ(g.getNumIo(Control | Input), 0);
-	ASSERT_EQ(g.getNumIo(Control | Output), 0);
+	ASSERT_EQ(g.getNumIo(Event | Input), 0);
+	ASSERT_EQ(g.getNumIo(Event | Output), 0);
 	{
 		const size_t numAIn = 5;
 		const size_t numAOut = 13;
@@ -133,16 +131,16 @@ TEST(Graph, SetNumIo)
 		ASSERT_EQ(g.getNumIo(Audio | Output), numAOut);
 		ASSERT_EQ(in->getNumIo(Audio | Output), numAIn);
 		ASSERT_EQ(out->getNumIo(Audio | Input), numAOut);
-		g.setNumIo(Control | Input, numCIn);
-		ASSERT_EQ(g.getNumIo(Control | Input), numCIn);
-		ASSERT_EQ(g.getNumIo(Control | Output), 0);
-		ASSERT_EQ(in->getNumIo(Control | Output), numCIn);
-		ASSERT_EQ(out->getNumIo(Control | Input), 0);
-		g.setNumIo(Control | Output, numCOut);
-		ASSERT_EQ(g.getNumIo(Control | Input), numCIn);
-		ASSERT_EQ(g.getNumIo(Control | Output), numCOut);
-		ASSERT_EQ(in->getNumIo(Control | Output), numCIn);
-		ASSERT_EQ(out->getNumIo(Control | Input), numCOut);
+		g.setNumIo(Event | Input, numCIn);
+		ASSERT_EQ(g.getNumIo(Event | Input), numCIn);
+		ASSERT_EQ(g.getNumIo(Event | Output), 0);
+		ASSERT_EQ(in->getNumIo(Event | Output), numCIn);
+		ASSERT_EQ(out->getNumIo(Event | Input), 0);
+		g.setNumIo(Event | Output, numCOut);
+		ASSERT_EQ(g.getNumIo(Event | Input), numCIn);
+		ASSERT_EQ(g.getNumIo(Event | Output), numCOut);
+		ASSERT_EQ(in->getNumIo(Event | Output), numCIn);
+		ASSERT_EQ(out->getNumIo(Event | Input), numCOut);
 	}
 }
 
@@ -163,17 +161,17 @@ TEST(Graph, Connections)
 	ASSERT_EQ(g.getNumConnections(), 1);
 	g.removeConnection({ in->getId(), 0, id, 4, Connection::Type::Audio });
 	ASSERT_EQ(g.getNumConnections(), 0);
-	res = g.addConnection({ in->getId(), 0, id, 0, Connection::Type::Control });
+	res = g.addConnection({ in->getId(), 0, id, 0, Connection::Type::Event });
 	ASSERT_EQ(res, false);
 	ASSERT_EQ(g.getNumConnections(), 0);
 	res = g.addConnection({ in->getId(), 0, id, 4, Connection::Type::Audio });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 1);
-	g.setNumIo(Control | Input, 3);
+	g.setNumIo(Event | Input, 3);
 	id = g.addModule(std::make_unique<Graph>());
 	auto* graph = dynamic_cast<Graph*>(g.getModuleById(id));
-	graph->setNumIo(Control | Input, 9);
-	res = g.addConnection({ in->getId(), 1, id, 7, Connection::Type::Control });
+	graph->setNumIo(Event | Input, 9);
+	res = g.addConnection({ in->getId(), 1, id, 7, Connection::Type::Event });
 	ASSERT_EQ(res, true);
 	ASSERT_EQ(g.getNumConnections(), 2);
 	g.disconnectModule(id);

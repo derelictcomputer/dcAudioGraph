@@ -11,7 +11,6 @@
 #include "../../dcAudioGraph/dcAudioGraph.h"
 
 dc::AudioBuffer audioBuffer;
-dc::AudioBuffer controlBuffer;
 dc::EventBuffer eventBuffer;
 const size_t nGraphIo = 2;
 
@@ -23,7 +22,7 @@ int audioDeviceCallback(const void* inputBuffer, void* outputBuffer, unsigned lo
 
     dc::Graph* graph = static_cast<dc::Graph*>(userData);
     audioBuffer.fromInterleaved(inSamples, framesPerBuffer, nGraphIo, false);
-    graph->process(audioBuffer, controlBuffer, eventBuffer);
+    graph->process(audioBuffer, eventBuffer);
 	audioBuffer.toInterleaved(outSamples, framesPerBuffer, nGraphIo);
 	return paContinue;
 }

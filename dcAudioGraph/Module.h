@@ -10,8 +10,7 @@ namespace dc
 enum IoType : uint8_t
 {
 	Audio   = 0x01,
-	Control = 0x02,
-    Event   = 0x04,
+    Event   = 0x02,
 	Input   = 0x10,
 	Output  = 0x20
 };
@@ -86,14 +85,11 @@ protected:
     {
 		size_t numAudioIn;
 		size_t numAudioOut;
-		size_t numControlIn;
-		size_t numControlOut;
 		size_t numEventIn;
 		size_t numEventOut;
 		size_t blockSize;
 		double sampleRate;
 		AudioBuffer audioBuffer;
-		AudioBuffer controlBuffer;
 		EventBuffer eventBuffer;
 		std::vector<ModuleParam*> params;
     };
@@ -104,11 +100,16 @@ protected:
 	virtual void blockSizeChanged() {}
     virtual void ioCountChanged(IoType type, size_t count) {}
 
+    void setEventIoFilters(IoType type, size_t index, EventMessage::Type filters);
+
 	// Params
 	bool addParam(const std::string& id, const std::string& displayName,
 		const ParamRange& range,
 		bool serializable = false, bool hasControlInput = false, float initialValue = 0.0f);
 	bool removeParam(size_t index);
+
+    // for use in process() only
+    static void updateParams(ModuleProcessContext& context);
 
 private:
 	// I/O
@@ -124,8 +125,6 @@ private:
 	size_t _blockSize = 0;
 	std::vector<Io> _audioInputs;
 	std::vector<Io> _audioOutputs;
-	std::vector<Io> _controlInputs;
-	std::vector<Io> _controlOutputs;
 	std::vector<Io> _eventInputs;
 	std::vector<Io> _eventOutputs;
 	std::vector<std::unique_ptr<ModuleParam>> _params;
