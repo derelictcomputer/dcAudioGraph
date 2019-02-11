@@ -142,9 +142,9 @@ void dc::ModuleParam::setRaw(float rawValue)
 	_value = _range.constrainRaw(rawValue);
 }
 
-void dc::ModuleParam::setControlScale(float scale)
+void dc::ModuleParam::setControlTarget(float rawValue)
 {
-	_controlScale = std::max(-1.0f, std::min(1.0f, scale));
+    _controlTarget = _range.constrainRaw(rawValue);
 }
 
 void dc::ModuleParam::setControlInput(float value)
@@ -157,9 +157,9 @@ void dc::ModuleParam::initSmoothing()
 	_normStart = getNormalized();
 	_normEnd = _normStart;
 	_normInc = 0.0f;
-    _scaleStart = getControlScale();
-    _scaleEnd = _scaleStart;
-    _scaleInc = 0.0f;
+    _ctNormStart = getControlTarget();
+    _ctNormEnd = _ctNormStart;
+    _ctNormInc = 0.0f;
     _inputStart = getControlInput();
     _inputEnd = _inputStart;
     _inputInc = 0.0f;
@@ -167,16 +167,15 @@ void dc::ModuleParam::initSmoothing()
 
 void dc::ModuleParam::updateSmoothing(size_t numSamples)
 {
-	_normStart = _normEnd;
-	_normEnd = getNormalized();
-	_normInc = (_normEnd - _normStart) / numSamples;
-	_scaleStart = _scaleEnd;
-	_scaleEnd = _controlScale;
-	_scaleInc = (_scaleEnd - _scaleStart) / numSamples;
+    _normStart = _normEnd;
+    _normEnd = getNormalized();
+    _normInc = (_normEnd - _normStart) / numSamples;
+    _ctNormStart = _ctNormEnd;
+    _ctNormEnd = _range.getNormalized(_controlTarget);
+    _ctNormInc = (_ctNormEnd - _ctNormStart) / numSamples;
     _inputStart = _inputEnd;
     _inputEnd = _controlInput;
     _inputInc = (_inputEnd - _inputStart) / numSamples;
-
 }
 
 float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
@@ -184,10 +183,9 @@ float dc::ModuleParam::getSmoothedRaw(size_t sampleOffset) const
     if (hasControlInput())
     {
         const float smoothed = _normStart + _normInc * sampleOffset;
-        const float scaleSmoothed = _scaleStart + _scaleInc * sampleOffset;
+        const float targetSmoothed = _ctNormStart + _ctNormInc * sampleOffset;
         const float inputSmoothed = _inputStart + _inputInc * sampleOffset;
-        const float ctlRange = scaleSmoothed < 0.0f ? smoothed : 1.0f - smoothed;
-        return _range.getRaw(smoothed + inputSmoothed * scaleSmoothed * ctlRange);
+        return _range.getRaw(smoothed + (targetSmoothed - smoothed) * inputSmoothed);
     }
 	return _range.getRaw(_normStart + _normInc * sampleOffset);
 }
