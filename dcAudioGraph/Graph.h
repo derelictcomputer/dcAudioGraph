@@ -86,6 +86,7 @@ private:
 			Connection::Type type;
 			size_t fromIdx;
 			size_t toIdx;
+            EventMessage::Type eventTypeFlags;
 		};
 
 		Module* module = nullptr;

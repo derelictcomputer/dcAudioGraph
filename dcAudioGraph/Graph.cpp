@@ -78,44 +78,54 @@ void dc::Graph::process(AudioBuffer& audio, EventBuffer& events) const
 
 void dc::Graph::processModule(ModuleRenderInfo& m)
 {
-	assert(nullptr != m.module);
+    assert(nullptr != m.module);
 
-	auto ctx = std::atomic_load(&m.module->_processContext);
+    auto ctx = std::atomic_load(&m.module->_processContext);
 
     if (nullptr == ctx)
     {
-		return;
+        return;
     }
 
-	// if this module has inputs, pull in the input data
+    // if this module has inputs, pull in the input data
     if (ctx->numAudioIn > 0 || ctx->numEventIn > 0)
-	{
-		ctx->audioBuffer.zero();
-		ctx->eventBuffer.clear();
+    {
+        ctx->audioBuffer.zero();
+        ctx->eventBuffer.clear();
 
-		for (auto inputInfo : m.inputs)
-		{
-			auto inCtx = std::atomic_load(&inputInfo.module->_processContext);
+        for (auto inputInfo : m.inputs)
+        {
+            auto inCtx = std::atomic_load(&inputInfo.module->_processContext);
 
             if (nullptr == inCtx)
             {
                 continue;
             }
 
-			switch (inputInfo.type)
-			{
-			case Connection::Type::Audio:
-				ctx->audioBuffer.addFrom(inCtx->audioBuffer, inputInfo.fromIdx, inputInfo.toIdx);
-				break;
-			case Connection::Type::Event:
-				ctx->eventBuffer.merge(inCtx->eventBuffer, inputInfo.fromIdx, inputInfo.toIdx);
-				break;
-			default:;
-			}
-		}
-	}
+            switch (inputInfo.type)
+            {
+            case Connection::Type::Audio:
+                ctx->audioBuffer.addFrom(inCtx->audioBuffer, inputInfo.fromIdx, inputInfo.toIdx);
+                break;
+            case Connection::Type::Event:
+            {
+                auto it = inCtx->eventBuffer.getIterator(inputInfo.fromIdx);
+                EventMessage msg;
+                while (it.next(msg))
+                {
+                    if (eventMessageTypeMatches(inputInfo.eventTypeFlags, msg.type))
+                    {
+                        ctx->eventBuffer.insert(msg, inputInfo.toIdx);
+                    }
+                }
+            }
+            break;
+            default:;
+            }
+        }
+    }
 
-	m.module->process(*ctx);
+    m.module->process(*ctx);
 }
 
 void dc::Graph::updateGraphProcessContext()
@@ -150,22 +160,31 @@ void dc::Graph::updateGraphProcessContext()
 
 dc::Graph::ModuleRenderInfo dc::Graph::makeModuleRenderInfo(Module& m)
 {
-	ModuleRenderInfo info;
-	info.module = &m;
+    ModuleRenderInfo info;
+    info.module = &m;
 
-	std::vector<Connection> connections;
-	if (getInputConnectionsForModule(m, connections))
-	{
-		for (auto& c : connections)
-		{
-			if (auto* upstream = getModuleById(c.fromId))
-			{
-				info.inputs.push_back({ upstream, c.type, c.fromIdx, c.toIdx });
-			}
-		}
-	}
+    std::vector<Connection> connections;
+    if (getInputConnectionsForModule(m, connections))
+    {
+        for (auto& c : connections)
+        {
+            if (auto* upstream = getModuleById(c.fromId))
+            {
+                EventMessage::Type emType = EventMessage::None;
+                if (c.type == Connection::Type::Event)
+                {
+                    if (auto* io = m.getIo(Event | Input, c.toIdx))
+                    {
+                        emType = io->eventTypeFlags;
+                    }
+                }
 
-	return info;
+                info.inputs.push_back({ upstream, c.type, c.fromIdx, c.toIdx, emType });
+            }
+        }
+    }
+
+    return info;
 }
 
 void dc::Graph::clear()
