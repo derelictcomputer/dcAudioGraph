@@ -234,6 +234,10 @@ bool dc::Module::removeIoInternal(std::vector<Io>& io, size_t index)
 	return false;
 }
 
+void dc::Module::process(ModuleProcessContext& /*context*/) {}
+
+void dc::Module::ioCountChanged(IoType /*type*/, size_t /*count*/) {}
+
 void dc::Module::setEventIoFilters(IoType type, size_t index, EventMessage::Type filters)
 {
     if (type & Input)

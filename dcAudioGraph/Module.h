@@ -94,11 +94,11 @@ protected:
 		std::vector<ModuleParam*> params;
     };
 
-	virtual void process(ModuleProcessContext& context) {}
+    virtual void process(ModuleProcessContext& context);
 
     virtual void sampleRateChanged() {}
 	virtual void blockSizeChanged() {}
-    virtual void ioCountChanged(IoType type, size_t count) {}
+    virtual void ioCountChanged(IoType type, size_t count);
 
     void setEventIoFilters(IoType type, size_t index, EventMessage::Type filters);
 
