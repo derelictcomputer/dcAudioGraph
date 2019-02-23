@@ -31,8 +31,8 @@ constexpr bool ioTypeMatches(const IoType lhs, const IoType rhs)
 }
 
 const size_t MODULE_MAX_MESSAGES = 32;
-const size_t MODULE_DEFAULT_MAX_IO = 16;
-const size_t MODULE_DEFAULT_MAX_PARAMS = 16;
+const size_t MODULE_DEFAULT_MAX_IO = 32;
+const size_t MODULE_DEFAULT_MAX_PARAMS = 32;
 const size_t MODULE_DEFAULT_MAX_BLOCK_SIZE = 2048;
 
 class Module
