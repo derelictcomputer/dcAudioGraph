@@ -305,11 +305,18 @@ void dc::Module::updateParams(ModuleProcessContext& context)
 
         if (param->hasControlInput())
         {
-            auto it = context.eventBuffer.getIterator(param->getControlInputIndex());
-            EventMessage msg;
-            while (it.next(msg))
+            if (context.eventBuffer.getNumMessages(param->getControlInputIndex()))
             {
-                param->setControlInput(msg.floatParam.value);
+                auto it = context.eventBuffer.getIterator(param->getControlInputIndex());
+                EventMessage msg;
+                while (it.next(msg))
+                {
+                    param->setControlInput(msg.floatParam.value);
+                }
+            }
+            else
+            {
+                param->setControlInput(0.0f);
             }
         }
     }
