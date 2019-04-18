@@ -34,7 +34,7 @@ There's not a small, dependency-free audio graph library out there, at least tha
 2. Copy the contents of the subfolder `dcAudioGraph` to your project
 3. `#include "dcAudioGraph.h"`
 
-Alternatively, you could build it as a static library. See the vs2017 project for an example of how to do that. Honestly, it's more straightforward to just include the source in your project.
+Alternatively, you could build it as a static library. See the CMake setup for an example of how to do that. Honestly, it's more straightforward to just include the source in your project.
 
 ## Contributing
 Yes please! Help is super appreciated. 
