@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.10)
 project(dcAudioGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
+add_subdirectory(googletest)
 include_directories(dcAudioGraph)
 include_directories(test)
 
@@ -20,7 +21,7 @@ set(SRC dcAudioGraph/AudioBuffer.h
         dcAudioGraph/Module.h
         dcAudioGraph/Module.cpp
         dcAudioGraph/ModuleParam.h
-        dcAudioGraph/Module.cpp)
+        dcAudioGraph/ModuleParam.cpp)
 
 add_library(dcAudioGraph STATIC ${SRC})
 
@@ -31,4 +32,4 @@ set(SRC test/Test_Common.h
         test/Test_Graph.cpp)
 
 add_executable(dcAudioGraph-test ${SRC})
-target_link_libraries(dcAudioGraph-test dcAudioGraph)
+target_link_libraries(dcAudioGraph-test dcAudioGraph gtest gtest_main)

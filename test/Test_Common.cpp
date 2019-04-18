@@ -30,7 +30,9 @@ bool dc::buffersEqual(AudioBuffer& b0, AudioBuffer& b1)
 
 		for (size_t sIdx = 0; sIdx < b0.getNumSamples(); ++sIdx)
 		{
-			if (!samplesEqual(b0Ptr[sIdx], b1Ptr[sIdx]))
+		    const float b0Sample = b0Ptr[sIdx];
+		    const float b1Sample = b1Ptr[sIdx];
+			if (!samplesEqual(b0Sample, b1Sample))
 			{
 				return false;
 			}

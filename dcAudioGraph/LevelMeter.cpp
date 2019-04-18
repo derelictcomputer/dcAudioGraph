@@ -1,4 +1,5 @@
 #include "LevelMeter.h"
+#include <cmath>
 
 dc::LevelMeter::LevelMeter() :
 	_levelMessageQueue(MODULE_DEFAULT_MAX_IO)

@@ -1,4 +1,5 @@
 #include "Gain.h"
+#include <cmath>
 
 dc::Gain::Gain()
 {
@@ -27,16 +28,16 @@ void dc::Gain::process(ModuleProcessContext& context)
 float dc::Gain::getNormalized(float rawValue, float min, float max)
 {
     const float pct = (rawValue - min) / (max - min);
-	return std::powf(pct, 2.0f);
+	return powf(pct, 2.0f);
 }
 
 float dc::Gain::getRaw(float normalizedValue, float min, float max)
 {
-	normalizedValue = std::expf(std::log(normalizedValue) / 2.0f);
+	normalizedValue = expf(std::log(normalizedValue) / 2.0f);
 	return min + (max - min) * normalizedValue;
 }
 
 float dc::Gain::dbToLin(float db)
 {
-	return std::powf(10.0f, db / 20.0f);
+	return powf(10.0f, db / 20.0f);
 }

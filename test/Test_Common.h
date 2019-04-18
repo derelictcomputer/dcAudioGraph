@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dcAudioGraph/dcAudioGraph.h"
+#include "../dcAudioGraph/AudioBuffer.h"
 
 namespace dc
 {
