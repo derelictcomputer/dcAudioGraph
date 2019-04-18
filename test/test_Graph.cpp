@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "Test_Common.h"
+#include "../dcAudioGraph/Graph.h"
 #include "../dcAudioGraph/LevelMeter.h"
 #include "../dcAudioGraph/Gain.h"
 
@@ -63,7 +64,7 @@ TEST(Graph, PassthroughBasic)
 	g.setBlockSize(numSamples);
 	g.setSampleRate(44100);
 	g.process(outBuffer, eventBuffer);
-	ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
+	EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 }
 
 TEST(Graph, PassthroughBasicLoop)
@@ -88,7 +89,7 @@ TEST(Graph, PassthroughBasicLoop)
 	for (int i = 0; i < 1000; ++i)
 	{
 		g.process(outBuffer, eventBuffer);
-		ASSERT_TRUE(buffersEqual(inBuffer, outBuffer));
+		EXPECT_TRUE(buffersEqual(inBuffer, outBuffer));
 	}
 }
 
@@ -97,23 +98,23 @@ TEST(Graph, AddRemove)
 	Graph g;
 	ASSERT_NE(g.getInputModule(), nullptr);
 	ASSERT_NE(g.getOutputModule(), nullptr);
-	ASSERT_EQ(g.getNumModules(), 0);
+	EXPECT_EQ(g.getNumModules(), 0);
 	auto id = g.addModule(std::make_unique<LevelMeter>());
-	ASSERT_EQ(g.getNumModules(), 1);
-	ASSERT_EQ(id, 3);
+	EXPECT_EQ(g.getNumModules(), 1);
+	EXPECT_EQ(id, 3);
 	ASSERT_NE(g.getModuleById(id), nullptr);
 	g.removeModuleById(id);
-	ASSERT_EQ(g.getNumModules(), 0);
-	ASSERT_EQ(g.getModuleById(id), nullptr);
+	EXPECT_EQ(g.getNumModules(), 0);
+	EXPECT_EQ(g.getModuleById(id), nullptr);
 }
 
 TEST(Graph, SetNumIo)
 {
 	Graph g;
-	ASSERT_EQ(g.getNumIo(Audio | Input), 0);
-	ASSERT_EQ(g.getNumIo(Audio | Output), 0);
-	ASSERT_EQ(g.getNumIo(Event | Input), 0);
-	ASSERT_EQ(g.getNumIo(Event | Output), 0);
+	EXPECT_EQ(g.getNumIo(Audio | Input), 0);
+	EXPECT_EQ(g.getNumIo(Audio | Output), 0);
+	EXPECT_EQ(g.getNumIo(Event | Input), 0);
+	EXPECT_EQ(g.getNumIo(Event | Output), 0);
 	{
 		const size_t numAIn = 5;
 		const size_t numAOut = 13;
@@ -122,60 +123,60 @@ TEST(Graph, SetNumIo)
 		auto* in = g.getInputModule();
 		auto* out = g.getOutputModule();
 		g.setNumIo(Audio | Input, numAIn);
-		ASSERT_EQ(g.getNumIo(Audio | Input), numAIn);
-		ASSERT_EQ(g.getNumIo(Audio | Output), 0);
-		ASSERT_EQ(in->getNumIo(Audio | Output), numAIn);
-		ASSERT_EQ(out->getNumIo(Audio | Input), 0);
+		EXPECT_EQ(g.getNumIo(Audio | Input), numAIn);
+		EXPECT_EQ(g.getNumIo(Audio | Output), 0);
+		EXPECT_EQ(in->getNumIo(Audio | Output), numAIn);
+		EXPECT_EQ(out->getNumIo(Audio | Input), 0);
 		g.setNumIo(Audio | Output, numAOut);
-		ASSERT_EQ(g.getNumIo(Audio | Input), numAIn);
-		ASSERT_EQ(g.getNumIo(Audio | Output), numAOut);
-		ASSERT_EQ(in->getNumIo(Audio | Output), numAIn);
-		ASSERT_EQ(out->getNumIo(Audio | Input), numAOut);
+		EXPECT_EQ(g.getNumIo(Audio | Input), numAIn);
+		EXPECT_EQ(g.getNumIo(Audio | Output), numAOut);
+		EXPECT_EQ(in->getNumIo(Audio | Output), numAIn);
+		EXPECT_EQ(out->getNumIo(Audio | Input), numAOut);
 		g.setNumIo(Event | Input, numCIn);
-		ASSERT_EQ(g.getNumIo(Event | Input), numCIn);
-		ASSERT_EQ(g.getNumIo(Event | Output), 0);
-		ASSERT_EQ(in->getNumIo(Event | Output), numCIn);
-		ASSERT_EQ(out->getNumIo(Event | Input), 0);
+		EXPECT_EQ(g.getNumIo(Event | Input), numCIn);
+		EXPECT_EQ(g.getNumIo(Event | Output), 0);
+		EXPECT_EQ(in->getNumIo(Event | Output), numCIn);
+		EXPECT_EQ(out->getNumIo(Event | Input), 0);
 		g.setNumIo(Event | Output, numCOut);
-		ASSERT_EQ(g.getNumIo(Event | Input), numCIn);
-		ASSERT_EQ(g.getNumIo(Event | Output), numCOut);
-		ASSERT_EQ(in->getNumIo(Event | Output), numCIn);
-		ASSERT_EQ(out->getNumIo(Event | Input), numCOut);
+		EXPECT_EQ(g.getNumIo(Event | Input), numCIn);
+		EXPECT_EQ(g.getNumIo(Event | Output), numCOut);
+		EXPECT_EQ(in->getNumIo(Event | Output), numCIn);
+		EXPECT_EQ(out->getNumIo(Event | Input), numCOut);
 	}
 }
 
 TEST(Graph, Connections)
 {
 	Graph g;
-	ASSERT_EQ(g.getNumConnections(), 0);
+	EXPECT_EQ(g.getNumConnections(), 0);
 	auto* in = g.getInputModule();
 	auto id = g.addModule(std::make_unique<Gain>());
 	auto res = g.addConnection({ in->getId(), 0, id, 0, Connection::Type::Audio });
-	ASSERT_EQ(res, false);
-	ASSERT_EQ(g.getNumConnections(), 0);
+	EXPECT_EQ(res, false);
+	EXPECT_EQ(g.getNumConnections(), 0);
 	g.setNumIo(Audio | Input, 2);
 	auto* gain = dynamic_cast<Gain*>(g.getModuleById(id));
 	gain->setNumIo(Audio | Input, 5);
 	res = g.addConnection({ in->getId(), 0, id, 4, Connection::Type::Audio });
-	ASSERT_EQ(res, true);
-	ASSERT_EQ(g.getNumConnections(), 1);
+	EXPECT_EQ(res, true);
+	EXPECT_EQ(g.getNumConnections(), 1);
 	g.removeConnection({ in->getId(), 0, id, 4, Connection::Type::Audio });
-	ASSERT_EQ(g.getNumConnections(), 0);
+	EXPECT_EQ(g.getNumConnections(), 0);
 	res = g.addConnection({ in->getId(), 0, id, 0, Connection::Type::Event });
-	ASSERT_EQ(res, false);
-	ASSERT_EQ(g.getNumConnections(), 0);
+	EXPECT_EQ(res, false);
+	EXPECT_EQ(g.getNumConnections(), 0);
 	res = g.addConnection({ in->getId(), 0, id, 4, Connection::Type::Audio });
-	ASSERT_EQ(res, true);
-	ASSERT_EQ(g.getNumConnections(), 1);
+	EXPECT_EQ(res, true);
+	EXPECT_EQ(g.getNumConnections(), 1);
 	g.setNumIo(Event | Input, 3);
 	id = g.addModule(std::make_unique<Graph>());
 	auto* graph = dynamic_cast<Graph*>(g.getModuleById(id));
 	graph->setNumIo(Event | Input, 9);
 	res = g.addConnection({ in->getId(), 1, id, 7, Connection::Type::Event });
-	ASSERT_EQ(res, true);
-	ASSERT_EQ(g.getNumConnections(), 2);
+	EXPECT_EQ(res, true);
+	EXPECT_EQ(g.getNumConnections(), 2);
 	g.disconnectModule(id);
-	ASSERT_EQ(g.getNumConnections(), 1);
+	EXPECT_EQ(g.getNumConnections(), 1);
 	g.disconnectModule(in->getId());
-	ASSERT_EQ(g.getNumConnections(), 0);
+	EXPECT_EQ(g.getNumConnections(), 0);
 }

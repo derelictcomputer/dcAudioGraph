@@ -8,7 +8,7 @@ TEST(AudioBuffer, CopyConstructor)
 	AudioBuffer b1(1024, 16);
 	b1.fill(0.5f);
 	AudioBuffer b2(b1);
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 }
 
 TEST(AudioBuffer, CopyAssignment)
@@ -16,7 +16,7 @@ TEST(AudioBuffer, CopyAssignment)
 	AudioBuffer b1(123, 12);
 	b1.fill(0.1f);
 	AudioBuffer b2 = b1;
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 }
 
 TEST(AudioBuffer, ResizeFunctional)
@@ -27,8 +27,8 @@ TEST(AudioBuffer, ResizeFunctional)
 	EXPECT_EQ(b1.getNumSamples(), 0);
 	EXPECT_EQ(b1.getNumChannels(), 0);
 	b1.resize(numSamples, numChannels);
-	ASSERT_EQ(b1.getNumSamples(), numSamples);
-	ASSERT_EQ(b1.getNumChannels(), numChannels);
+	EXPECT_EQ(b1.getNumSamples(), numSamples);
+	EXPECT_EQ(b1.getNumChannels(), numChannels);
 }
 
 TEST(AudioBuffer, FillFunctional)
@@ -52,14 +52,14 @@ TEST(AudioBuffer, FillFunctional)
 	AudioBuffer b2(numSamples, numChannels);
 	b2.fill(value);
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 
 	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
 	{
 		b1.fill(cIdx, 0.0f);
-		ASSERT_FALSE(buffersEqual(b1, b2));
+		EXPECT_FALSE(buffersEqual(b1, b2));
 		b2.fill(cIdx, 0.0f);
-		ASSERT_TRUE(buffersEqual(b1, b2));
+		EXPECT_TRUE(buffersEqual(b1, b2));
 	}
 }
 
@@ -86,7 +86,7 @@ TEST(AudioBuffer, ZeroFunctional)
 
 	b2.zero();
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 
 	b1.fill(0.2f);
 	b2.fill(0.2f);
@@ -96,9 +96,9 @@ TEST(AudioBuffer, ZeroFunctional)
 	for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
 	{
 		b1.zero(cIdx);
-		ASSERT_FALSE(buffersEqual(b1, b2));
+		EXPECT_FALSE(buffersEqual(b1, b2));
 		b2.zero(cIdx);
-		ASSERT_TRUE(buffersEqual(b1, b2));
+		EXPECT_TRUE(buffersEqual(b1, b2));
 	}
 }
 
@@ -115,7 +115,7 @@ TEST(AudioBuffer, CopyFunctional)
 
 	b1.copyFrom(b2, true);
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 
 	b1.zero();
 
@@ -124,7 +124,7 @@ TEST(AudioBuffer, CopyFunctional)
 		b1.copyFrom(b2, cIdx, cIdx);
 	}
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 }
 
 TEST(AudioBuffer, AddFunctional)
@@ -144,7 +144,7 @@ TEST(AudioBuffer, AddFunctional)
 
 	b1.addFrom(b2);
 
-	ASSERT_TRUE(buffersEqual(b1, bE));
+	EXPECT_TRUE(buffersEqual(b1, bE));
 
 	b1.fill(startValue);
 
@@ -153,7 +153,7 @@ TEST(AudioBuffer, AddFunctional)
 		b1.addFrom(b2, cIdx, cIdx);
 	}
 
-	ASSERT_TRUE(buffersEqual(b1, bE));
+	EXPECT_TRUE(buffersEqual(b1, bE));
 }
 
 TEST(AudioBuffer, ApplyGainFunctional)
@@ -170,7 +170,7 @@ TEST(AudioBuffer, ApplyGainFunctional)
 
 	b2.applyGain(0.0f);
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 
 	b1.fill(0.5f);
 	b2.fill(1.0f);
@@ -180,7 +180,7 @@ TEST(AudioBuffer, ApplyGainFunctional)
 		b1.applyGain(cIdx, 2.0f);
 	}
 
-	ASSERT_TRUE(buffersEqual(b1, b2));
+	EXPECT_TRUE(buffersEqual(b1, b2));
 }
 
 TEST(AudioBuffer, FromInterleavedFunctional)
@@ -212,7 +212,7 @@ TEST(AudioBuffer, FromInterleavedFunctional)
 			}
 		}
 		b.fromInterleaved(interleaved.data(), numSamples, numChannels, true);
-		ASSERT_TRUE(buffersEqual(b, expected));
+		EXPECT_TRUE(buffersEqual(b, expected));
 	}
 
 	// without resize
@@ -240,7 +240,7 @@ TEST(AudioBuffer, FromInterleavedFunctional)
 			}
 		}
 		b.fromInterleaved(interleaved.data(), numSamples, numChannels, false);
-		ASSERT_TRUE(buffersEqual(b, expected));
+		EXPECT_TRUE(buffersEqual(b, expected));
 	}
 }
 
@@ -281,7 +281,7 @@ TEST(AudioBuffer, ToInterleavedFunctional)
 		{
 			const float sTest = testBuffer[cIdx + sIdx * numChannels];
 			const float sExpected = expected[cIdx + sIdx * numChannels];
-			ASSERT_TRUE(samplesEqual(sTest, sExpected));
+			EXPECT_TRUE(samplesEqual(sTest, sExpected));
 		}
 	}
 }

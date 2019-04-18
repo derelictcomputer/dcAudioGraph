@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace dc
 {
 class AudioBuffer final
