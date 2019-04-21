@@ -11,14 +11,15 @@ namespace dc
 class Gain : public Module
 {
 public:
-	Gain();
+  Gain();
 
 private:
-    void process(ModuleProcessContext& context) override;
+  void process(ModuleProcessContext& context) override;
 
-	static float getNormalized(float rawValue, float min, float max);
-	static float getRaw(float normalizedValue, float min, float max);
+  static float getNormalized(float rawValue, float min, float max);
 
-	static float dbToLin(float db);
+  static float getRaw(float normalizedValue, float min, float max);
+
+  static float dbToLin(float db);
 };
 }
