@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include "AudioBuffer.h"
 
 dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
@@ -206,4 +207,41 @@ float* dc::AudioBuffer::getChannelPointer(size_t channel)
 	}
 
 	return nullptr;
+}
+
+float dc::AudioBuffer::getRms(size_t channel) const
+{
+    if (channel >= _numChannels)
+    {
+        return 0;
+    }
+
+    auto *cPtr = _data + channel * _numSamples;
+    float sum = 0.0f;
+    for (size_t sIdx = 0; sIdx < _numSamples; ++sIdx)
+    {
+        const float sample = cPtr[sIdx];
+        sum += sample * sample;
+    }
+    return std::sqrt(sum / _numSamples);
+}
+
+float dc::AudioBuffer::getPeak(size_t channel) const
+{
+    if (channel >= _numChannels)
+    {
+        return 0;
+    }
+
+    auto *cPtr = _data + channel * _numSamples;
+    float peak = 0;
+    for (size_t sIdx = 0; sIdx < _numSamples; ++sIdx)
+    {
+        const float val = std::abs(cPtr[sIdx]);
+        if (val > peak)
+        {
+            peak = val;
+        }
+    }
+    return peak;
 }

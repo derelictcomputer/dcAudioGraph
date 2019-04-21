@@ -29,7 +29,8 @@ add_library(dcAudioGraph STATIC ${SRC})
 set(SRC test/Test_Common.h
         test/Test_Common.cpp
         test/Test_Buffer.cpp
-        test/Test_Graph.cpp)
+        test/test_Graph.cpp
+        test/Test_LevelMeter.cpp)
 
 add_executable(dcAudioGraph-test ${SRC})
 target_link_libraries(dcAudioGraph-test dcAudioGraph gtest gtest_main)
