@@ -6,6 +6,7 @@ dc::LevelMeter::LevelMeter() :
 {
 	setNumIo(Audio | Input | Output, 1);
 	_levels.resize(MODULE_DEFAULT_MAX_IO);
+	addParam("type", "Type", ParamRange(0, 1, 1), true, false, 0);
 }
 
 float dc::LevelMeter::getLevel(size_t channel)
@@ -22,27 +23,22 @@ float dc::LevelMeter::getLevel(size_t channel)
 
 void dc::LevelMeter::process(ModuleProcessContext& context)
 {
-	if (wantsMessage())
-	{
-		const size_t nSamples = context.audioBuffer.getNumSamples();
-		const size_t nChannels = context.audioBuffer.getNumChannels();
+    if (wantsMessage())
+    {
+        const size_t nChannels = context.audioBuffer.getNumChannels();
+        const int type = (int) context.params[0]->getRaw();
 
-		for (size_t cIdx = 0; cIdx < nChannels; ++cIdx)
-		{
-			auto* cPtr = context.audioBuffer.getChannelPointer(cIdx);
-			float sum = 0.0f;
-			for (size_t sIdx = 0; sIdx < nSamples; ++sIdx)
-			{
-				const float sample = cPtr[sIdx];
-				sum += sample * sample;
-			}
-			const auto level = std::sqrt(sum / nSamples);
-			LevelMessage msg{};
-			msg.index = cIdx;
-			msg.level = level;
-			pushLevelMessage(msg);
-		}
-	}
+        for (size_t cIdx = 0; cIdx < nChannels; ++cIdx)
+        {
+            const float level = type == 0
+                                ? context.audioBuffer.getPeak(cIdx)
+                                : context.audioBuffer.getRms(cIdx);
+            LevelMessage msg{};
+            msg.index = cIdx;
+            msg.level = level;
+            pushLevelMessage(msg);
+        }
+    }
 }
 
 bool dc::LevelMeter::pushLevelMessage(const LevelMessage& msg)

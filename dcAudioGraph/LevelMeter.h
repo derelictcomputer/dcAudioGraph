@@ -1,5 +1,5 @@
 /*
- * Provides simple RMS readings for the most recent buffer,
+ * Provides level readings for the most recent buffer,
  * and passes through audio and control.
  */
 

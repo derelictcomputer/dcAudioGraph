@@ -76,6 +76,12 @@ public:
 	// copies the contents of this buffer to an interleaved raw buffer
 	void toInterleaved(float* buffer, size_t numSamples, size_t numChannels);
 
+	// Get the RMS level of a channel in the buffer
+	float getRms(size_t channel) const;
+
+	// Get the peak level of a channel in the buffer
+	float getPeak(size_t channel) const;
+
 	// get a pointer to a channel in this buffer
 	// Note: if you want to iterate the whole buffer, just get channel 0
 	float* getChannelPointer(size_t channel);
