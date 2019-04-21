@@ -135,7 +135,7 @@ TEST_F(TestLevelMeter, Multithreaded)
             ++procUpdateCount;
         }
     });
-    
+
     std::thread ctlThread([&]() {
         while (ctlUpdateCount < nCtlUpdates)
         {
