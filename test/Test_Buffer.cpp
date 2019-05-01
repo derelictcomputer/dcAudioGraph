@@ -214,34 +214,6 @@ TEST(AudioBuffer, FromInterleavedFunctional)
     b.fromInterleaved(interleaved.data(), numSamples, numChannels, true);
     EXPECT_TRUE(buffersEqual(b, expected));
   }
-
-  // without resize
-  {
-    const size_t noResizeNumSamples = 64;
-    const size_t noResizeNumChannels = 8;
-    AudioBuffer b;
-    b.resize(noResizeNumSamples, noResizeNumChannels);
-    AudioBuffer expected;
-    expected.resize(noResizeNumSamples, noResizeNumChannels);
-    for (size_t cIdx = 0; cIdx < numChannels; ++cIdx)
-    {
-      if (cIdx >= noResizeNumChannels)
-      {
-        break;
-      }
-      auto* cPtr = expected.getChannelPointer(cIdx);
-      for (size_t sIdx = 0; sIdx < numSamples; ++sIdx)
-      {
-        if (sIdx >= noResizeNumSamples)
-        {
-          break;
-        }
-        cPtr[sIdx] = static_cast<float>(cIdx);
-      }
-    }
-    b.fromInterleaved(interleaved.data(), numSamples, numChannels, false);
-    EXPECT_TRUE(buffersEqual(b, expected));
-  }
 }
 
 TEST(AudioBuffer, ToInterleavedFunctional)

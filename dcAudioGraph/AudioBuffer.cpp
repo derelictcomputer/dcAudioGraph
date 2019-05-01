@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include "AudioBuffer.h"
 
 dc::AudioBuffer::AudioBuffer(size_t numSamples, size_t numChannels)
@@ -56,9 +57,9 @@ void dc::AudioBuffer::resize(size_t numSamples, size_t numChannels)
 
 void dc::AudioBuffer::fill(float value)
 {
-  if (nullptr != _data)
+  for (size_t i = 0; i < _allocatedSize; ++i)
   {
-    std::fill(_data, _data + _numSamples * _numChannels, value);
+    _data[i] = value;
   }
 }
 
@@ -66,18 +67,24 @@ void dc::AudioBuffer::fill(size_t channel, float value)
 {
   if (float* start = getChannelPointer(channel))
   {
-    std::fill(start, start + _numSamples, value);
+    for (size_t i = 0; i < _numSamples; ++i)
+    {
+      start[i] = value;
+    }
   }
 }
 
 void dc::AudioBuffer::zero()
 {
-  fill(0.0f);
+  memset(_data, 0, _allocatedSize * sizeof(float));
 }
 
 void dc::AudioBuffer::zero(size_t channel)
 {
-  fill(channel, 0.0f);
+  if (float* start = getChannelPointer(channel))
+  {
+    memset(start, 0, _numSamples * sizeof(float));
+  }
 }
 
 void dc::AudioBuffer::copyFrom(const AudioBuffer& other, bool allowResize)
@@ -90,7 +97,7 @@ void dc::AudioBuffer::copyFrom(const AudioBuffer& other, bool allowResize)
   // if buffers are the same size, shortcut
   if (_numSamples == other._numSamples && _numChannels == other._numChannels)
   {
-    std::copy(other._data, other._data + _numSamples * _numChannels, _data);
+    memcpy(_data, other._data, _allocatedSize * sizeof(float));
   }
   else
   {
@@ -108,10 +115,9 @@ void dc::AudioBuffer::copyFrom(const AudioBuffer& other, size_t fromChannel, siz
   if (fromChannel < other.getNumChannels() && toChannel < _numChannels)
   {
     const size_t numSamplesToCopy = std::min(_numSamples, other._numSamples);
-    float* fromStart = other._data + fromChannel * other._numSamples;
-    float* fromEnd = fromStart + numSamplesToCopy;
-    float* toStart = _data + toChannel * _numSamples;
-    std::copy(fromStart, fromEnd, toStart);
+    float* from = other._data + fromChannel * other._numSamples;
+    float* to = _data + toChannel * _numSamples;
+    memcpy(to, from, numSamplesToCopy * sizeof(float));
   }
 }
 
@@ -140,9 +146,9 @@ void dc::AudioBuffer::addFrom(const AudioBuffer& other, size_t fromChannel, size
 
 void dc::AudioBuffer::applyGain(float gain)
 {
-  for (size_t cIdx = 0; cIdx < _numChannels; ++cIdx)
+  for (size_t i = 0; i < _allocatedSize; ++i)
   {
-    applyGain(cIdx, gain);
+    _data[i] *= gain;
   }
 }
 
