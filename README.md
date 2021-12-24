@@ -1,7 +1,7 @@
 # dcAudioGraph
 An audio/control processing graph for use in interactive sound software.
 
-**Please note: this library is currently in heavy, early development. Many things may change on the `dev` branch without warning, and backward compatibility is not guaranteed.**
+**NOTE: This project is no longer in development, but is archived here for informational purposes and history.**
 
 ## Why?
 
